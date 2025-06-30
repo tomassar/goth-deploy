@@ -241,25 +241,31 @@ func (s *DeploymentService) GetProjectURL(subdomain string) string {
 func (s *DeploymentService) RestartActiveDeployments(db *sql.DB) error {
 	// Query for active projects
 	rows, err := db.Query(`
-		SELECT subdomain, repository, branch FROM projects WHERE status = ?
+		SELECT id, name, subdomain, repository, branch FROM projects WHERE status = ?
 	`, "active")
 	if err != nil {
 		return fmt.Errorf("failed to query active projects: %w", err)
 	}
 	defer rows.Close()
 
-	var restarted, failed int
+	var restarted, failed, rebuilt int
 
 	for rows.Next() {
-		var subdomain, repository, branch string
-		if err := rows.Scan(&subdomain, &repository, &branch); err != nil {
+		var id int
+		var name, subdomain, repository, branch string
+		if err := rows.Scan(&id, &name, &subdomain, &repository, &branch); err != nil {
+			fmt.Printf("Failed to scan project row: %v\n", err)
 			failed++
 			continue
 		}
 
+		fmt.Printf("Attempting to restart project: %s (%s)\n", name, subdomain)
+
 		// Check if deployment directory exists
 		projectPath := filepath.Join(s.deploymentPath, subdomain)
 		if _, err := os.Stat(projectPath); os.IsNotExist(err) {
+			fmt.Printf("Project directory missing for %s, marking as failed\n", subdomain)
+			s.updateProjectStatus(db, id, "failed")
 			failed++
 			continue
 		}
@@ -267,26 +273,59 @@ func (s *DeploymentService) RestartActiveDeployments(db *sql.DB) error {
 		// Check if built app exists
 		appPath := filepath.Join(projectPath, "app")
 		if _, err := os.Stat(appPath); os.IsNotExist(err) {
-			failed++
-			continue
+			fmt.Printf("Built app missing for %s, attempting rebuild...\n", subdomain)
+
+			// Try to rebuild the project
+			if err := s.buildProject(context.Background(), projectPath); err != nil {
+				fmt.Printf("Failed to rebuild %s: %v\n", subdomain, err)
+				s.updateProjectStatus(db, id, "failed")
+				failed++
+				continue
+			}
+
+			// Check again if app was built successfully
+			if _, err := os.Stat(appPath); os.IsNotExist(err) {
+				fmt.Printf("Rebuild failed for %s - app binary still missing\n", subdomain)
+				s.updateProjectStatus(db, id, "failed")
+				failed++
+				continue
+			}
+
+			fmt.Printf("Successfully rebuilt %s\n", subdomain)
+			rebuilt++
 		}
 
-		// Start the service directly without rebuilding
+		// Start the service
 		if err := s.startService(context.Background(), subdomain, projectPath); err != nil {
+			fmt.Printf("Failed to start service for %s: %v\n", subdomain, err)
+			s.updateProjectStatus(db, id, "failed")
 			failed++
 			continue
 		}
 
+		fmt.Printf("Successfully restarted %s\n", subdomain)
 		restarted++
 	}
 
-	if failed > 0 {
-		return fmt.Errorf("restarted %d deployments, failed to restart %d deployments", restarted, failed)
-	}
-
+	// Log summary
 	if restarted > 0 {
-		fmt.Printf("Successfully restarted %d active deployments\n", restarted)
+		fmt.Printf("✓ Successfully restarted %d active deployments\n", restarted)
+	}
+	if rebuilt > 0 {
+		fmt.Printf("🔨 Rebuilt %d missing app binaries\n", rebuilt)
+	}
+	if failed > 0 {
+		fmt.Printf("❌ Failed to restart %d deployments\n", failed)
+		return fmt.Errorf("restarted %d deployments, rebuilt %d apps, failed to restart %d deployments", restarted, rebuilt, failed)
 	}
 
 	return nil
+}
+
+// Helper function to update project status
+func (s *DeploymentService) updateProjectStatus(db *sql.DB, projectID int, status string) {
+	_, err := db.Exec(`UPDATE projects SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, status, projectID)
+	if err != nil {
+		fmt.Printf("Failed to update project %d status to %s: %v\n", projectID, status, err)
+	}
 }
