@@ -26,6 +26,7 @@ type DeploymentService struct {
 	processTracker map[string]*os.Process // subdomain -> process
 	portMux        sync.RWMutex
 	processMux     sync.RWMutex
+	secretsService *SecretsService
 }
 
 func NewDeploymentService(deploymentPath, baseDomain string, proxyService *ProxyService) *DeploymentService {
@@ -67,7 +68,7 @@ func (s *DeploymentService) Deploy(ctx context.Context, project *models.Project,
 	s.saveBuildLogs(project.ID, fmt.Sprintf("Build completed successfully at %s\n\nBuild Output:\n%s", time.Now().Format("2006-01-02 15:04:05"), buildLogs))
 
 	// Start the service
-	if err := s.startService(ctx, project.Subdomain, projectPath); err != nil {
+	if err := s.startService(ctx, project.ID, project.Subdomain, projectPath); err != nil {
 		errorMsg := fmt.Sprintf("Failed to start service: %v", err)
 		s.saveBuildLogs(project.ID, fmt.Sprintf("Service start failed: %v\n\nPrevious build was successful.", err))
 		return fmt.Errorf(errorMsg)
@@ -163,9 +164,11 @@ func (s *DeploymentService) buildProjectWithLogs(ctx context.Context, projectPat
 	return logBuffer.String(), nil
 }
 
-func (s *DeploymentService) startService(ctx context.Context, subdomain, projectPath string) error {
-	// Stop existing service if running
-	s.StopService(subdomain)
+func (s *DeploymentService) startService(ctx context.Context, projectID int, subdomain, projectPath string) error {
+	appPath := filepath.Join(projectPath, "app")
+	if _, err := os.Stat(appPath); err != nil {
+		return fmt.Errorf("built app does not exist: %w", err)
+	}
 
 	// Find available port
 	port, err := s.findAvailablePort()
@@ -173,47 +176,48 @@ func (s *DeploymentService) startService(ctx context.Context, subdomain, project
 		return fmt.Errorf("failed to find available port: %w", err)
 	}
 
-	// Start new service
+	// Get project secrets for environment variables
+	var env []string
+	if s.secretsService != nil {
+		secrets, err := s.secretsService.GetProjectSecretsForDeployment(projectID)
+		if err != nil {
+			fmt.Printf("Warning: Could not load secrets for project %d: %v\n", projectID, err)
+		} else {
+			// Add secrets as environment variables
+			for key, value := range secrets {
+				env = append(env, fmt.Sprintf("%s=%s", key, value))
+			}
+			if len(secrets) > 0 {
+				fmt.Printf("Loaded %d secrets for deployment\n", len(secrets))
+			}
+		}
+	}
+
+	// Add standard environment variables
+	env = append(env, fmt.Sprintf("PORT=%d", port))
+
+	// Create command with environment variables
 	cmd := exec.CommandContext(ctx, "./app")
 	cmd.Dir = projectPath
-	cmd.Env = append(os.Environ(),
-		fmt.Sprintf("PORT=%d", port),
-		fmt.Sprintf("SUBDOMAIN=%s", subdomain),
-	)
-
-	// Create logs directory
-	logsDir := filepath.Join(s.deploymentPath, "logs")
-	os.MkdirAll(logsDir, 0755)
-
-	// Create log file
-	logFile, err := os.Create(filepath.Join(logsDir, subdomain+".log"))
-	if err != nil {
-		return fmt.Errorf("failed to create log file: %w", err)
-	}
-	defer logFile.Close()
-
-	cmd.Stdout = logFile
-	cmd.Stderr = logFile
+	cmd.Env = append(os.Environ(), env...)
 
 	// Start the process
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start service: %w", err)
 	}
 
-	// Track the port and process for this subdomain
+	// Store the process for later management
 	s.portMux.Lock()
 	s.portTracker[subdomain] = port
-	s.portMux.Unlock()
-
 	s.processMux.Lock()
 	s.processTracker[subdomain] = cmd.Process
+	s.portMux.Unlock()
 	s.processMux.Unlock()
 
-	// Add route to proxy service
-	targetURL := fmt.Sprintf("http://localhost:%d", port)
-	s.proxyService.AddRoute(subdomain, targetURL)
+	// Register with proxy service
+	s.proxyService.AddRoute(subdomain, fmt.Sprintf("http://localhost:%d", port))
 
-	fmt.Printf("Started service for %s on port %d (PID: %d)\n", subdomain, port, cmd.Process.Pid)
+	fmt.Printf("Service %s started on port %d\n", subdomain, port)
 	return nil
 }
 
@@ -465,7 +469,7 @@ func (s *DeploymentService) RestartActiveDeployments(db *sql.DB) error {
 		}
 
 		// Start the service
-		if err := s.startService(context.Background(), subdomain, projectPath); err != nil {
+		if err := s.startService(context.Background(), id, subdomain, projectPath); err != nil {
 			fmt.Printf("Failed to start service for %s: %v\n", subdomain, err)
 			s.updateProjectStatus(db, id, "failed")
 			failed++
@@ -561,4 +565,9 @@ func (s *DeploymentService) UpdateDeploymentRecord(db *sql.DB, deploymentID int,
 		WHERE id = ?
 	`, status, logs, errorMessage, deploymentID)
 	return err
+}
+
+// SetSecretsService allows injection of secrets service for environment variables
+func (s *DeploymentService) SetSecretsService(secretsService *SecretsService) {
+	s.secretsService = secretsService
 }

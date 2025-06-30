@@ -46,6 +46,10 @@ func main() {
 	githubService := services.NewGitHubService(cfg.GitHubClientID, cfg.GitHubClientSecret)
 	proxyService := services.NewProxyService()
 	deploymentService := services.NewDeploymentService(cfg.DeploymentPath, cfg.BaseDomain, proxyService)
+	secretsService := services.NewSecretsService(db, cfg.EncryptionKey)
+
+	// Connect secrets service to deployment service
+	deploymentService.SetSecretsService(secretsService)
 
 	// Restart active deployments on startup
 	log.Println("Restarting active deployments...")
@@ -56,7 +60,7 @@ func main() {
 	}
 
 	// Initialize handlers
-	handler := handlers.NewTemplHandler(db, githubService, deploymentService, cfg)
+	handler := handlers.NewTemplHandler(db, githubService, deploymentService, secretsService, cfg)
 
 	// Setup main router for dashboard/management
 	r := chi.NewRouter()
@@ -91,6 +95,11 @@ func main() {
 	r.Post("/projects/{id}/stop", handler.StopProject)
 	r.Delete("/projects/{id}", handler.DeleteProject)
 	r.Get("/projects/{id}/logs", handler.GetDeploymentLogs)
+	r.Get("/projects/{id}/secrets", handler.GetProjectSecrets)
+	r.Post("/projects/{id}/secrets", handler.CreateProjectSecret)
+	r.Put("/projects/{id}/secrets/{secretId}", handler.UpdateProjectSecret)
+	r.Delete("/projects/{id}/secrets/{secretId}", handler.DeleteProjectSecret)
+	r.Get("/projects/{id}/secrets/{secretId}/value", handler.GetSecretValue)
 	r.Post("/deployments/stop-all", handler.StopAllProjects)
 	r.Get("/deployments/active", handler.GetActiveDeployments)
 

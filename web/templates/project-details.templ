@@ -167,6 +167,32 @@ templ ProjectDetails(project *models.Project, deployments []models.Deployment, u
 					</div>
 				</div>
 
+				<!-- Environment Variables Section -->
+				<div class="mb-8">
+					<div class="flex items-center justify-between mb-6">
+						<h2 class="text-2xl font-bold text-white flex items-center">
+							<i class="fas fa-key mr-3 text-neon-orange"></i>
+							Environment Variables
+						</h2>
+						<button 
+							onclick="showAddSecretModal()"
+							class="px-4 py-2 bg-gradient-to-r from-neon-orange to-orange-600 hover:from-orange-600 hover:to-neon-orange rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-neon-orange/25">
+							<i class="fas fa-plus mr-2"></i>Add Variable
+						</button>
+					</div>
+					
+					<div id="secrets-container" 
+						 hx-get={ fmt.Sprintf("/projects/%d/secrets", project.ID) }
+						 hx-trigger="load, secretCreated from:body, secretUpdated from:body, secretDeleted from:body"
+						 hx-swap="innerHTML"
+						 class="bg-dark-800/60 backdrop-blur-md rounded-xl border border-neon-orange/20 p-6">
+						<div class="flex items-center justify-center py-8">
+							<i class="fas fa-spinner animate-spin text-neon-orange mr-2"></i>
+							<span class="text-gray-400">Loading environment variables...</span>
+						</div>
+					</div>
+				</div>
+
 				<!-- Build Logs Section -->
 				if project.BuildLogs != "" {
 					<div class="mb-8">
@@ -261,5 +287,135 @@ templ ProjectDetails(project *models.Project, deployments []models.Deployment, u
 				</div>
 			</div>
 		</div>
+		
+		<!-- Add Secret Modal -->
+		<div id="addSecretModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+			<div class="bg-dark-800 rounded-xl p-6 w-full max-w-md mx-4 border border-neon-orange/30">
+				<div class="flex items-center justify-between mb-6">
+					<h3 class="text-xl font-bold text-white">Add Environment Variable</h3>
+					<button onclick="hideAddSecretModal()" class="text-gray-400 hover:text-white transition-colors">
+						<i class="fas fa-times"></i>
+					</button>
+				</div>
+				
+				<form id="addSecretForm" onsubmit="addSecret(event)">
+					<div class="mb-4">
+						<label class="block text-sm font-medium text-gray-300 mb-2">Key Name</label>
+						<input type="text" id="secretKey" name="key_name" required
+							   class="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white focus:border-neon-orange focus:outline-none"/>
+						<p class="text-xs text-gray-500 mt-1">e.g., DATABASE_URL, API_KEY</p>
+					</div>
+					
+					<div class="mb-4">
+						<label class="block text-sm font-medium text-gray-300 mb-2">Value</label>
+						<input type="password" id="secretValue" name="value" required
+							   class="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white focus:border-neon-orange focus:outline-none"/>
+					</div>
+					
+					<div class="mb-6">
+						<label class="block text-sm font-medium text-gray-300 mb-2">Description (Optional)</label>
+						<input type="text" id="secretDescription" name="description"
+							   class="w-full px-3 py-2 bg-dark-700 border border-gray-600 rounded-lg text-white focus:border-neon-orange focus:outline-none"
+							   placeholder="Brief description of this variable"/>
+					</div>
+					
+					<div class="flex space-x-3">
+						<button type="submit" 
+								class="flex-1 px-4 py-2 bg-gradient-to-r from-neon-orange to-orange-600 hover:from-orange-600 hover:to-neon-orange rounded-lg font-semibold transition-all duration-300">
+							Add Variable
+						</button>
+						<button type="button" onclick="hideAddSecretModal()"
+								class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg font-semibold transition-colors">
+							Cancel
+						</button>
+					</div>
+				</form>
+			</div>
+		</div>
+
+		<script>
+			const projectId = { fmt.Sprintf("%d", project.ID) };
+			
+			function showAddSecretModal() {
+				document.getElementById('addSecretModal').classList.remove('hidden');
+			}
+			
+			function hideAddSecretModal() {
+				document.getElementById('addSecretModal').classList.add('hidden');
+				document.getElementById('addSecretForm').reset();
+			}
+			
+			function addSecret(event) {
+				event.preventDefault();
+				
+				const formData = new FormData(event.target);
+				const data = Object.fromEntries(formData);
+				
+				fetch(`/projects/${projectId}/secrets`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify(data)
+				})
+				.then(response => response.json())
+				.then(data => {
+					if (data.success) {
+						hideAddSecretModal();
+						// Trigger HTMX to reload secrets
+						htmx.trigger(document.body, 'secretCreated');
+					} else {
+						alert(data.message || 'Error adding secret');
+					}
+				})
+				.catch(error => {
+					console.error('Error:', error);
+					alert('Error adding secret');
+				});
+			}
+			
+			function deleteSecret(secretId) {
+				if (!confirm('Are you sure you want to delete this environment variable?')) {
+					return;
+				}
+				
+				fetch(`/projects/${projectId}/secrets/${secretId}`, {
+					method: 'DELETE'
+				})
+				.then(response => response.json())
+				.then(data => {
+					if (data.success) {
+						htmx.trigger(document.body, 'secretDeleted');
+					} else {
+						alert(data.message || 'Error deleting secret');
+					}
+				})
+				.catch(error => {
+					console.error('Error:', error);
+					alert('Error deleting secret');
+				});
+			}
+			
+			function toggleSecretValue(secretId, element) {
+				const isHidden = element.textContent.includes('*');
+				
+				if (isHidden) {
+					// Show value
+					fetch(`/projects/${projectId}/secrets/${secretId}/value`)
+					.then(response => response.json())
+					.then(data => {
+						element.textContent = data.value;
+						element.nextElementSibling.innerHTML = '<i class="fas fa-eye-slash"></i>';
+					})
+					.catch(error => {
+						console.error('Error:', error);
+						alert('Error retrieving secret value');
+					});
+				} else {
+					// Hide value
+					location.reload(); // Simple way to reset to masked values
+				}
+			}
+		</script>
 	}
 } 

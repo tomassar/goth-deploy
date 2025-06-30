@@ -34,6 +34,7 @@ Edit `.env` and add your GitHub OAuth credentials:
 GITHUB_CLIENT_ID=your_client_id_here
 GITHUB_CLIENT_SECRET=your_client_secret_here
 SESSION_SECRET=generate_a_random_string_here
+ENCRYPTION_KEY=generate_a_32_character_encryption_key_here
 ```
 
 ## 5. Run the Application

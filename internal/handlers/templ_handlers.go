@@ -23,14 +23,16 @@ type TemplHandler struct {
 	db                *sql.DB
 	githubService     *services.GitHubService
 	deploymentService *services.DeploymentService
+	secretsService    *services.SecretsService
 	config            *config.Config
 }
 
-func NewTemplHandler(db *sql.DB, githubService *services.GitHubService, deploymentService *services.DeploymentService, cfg *config.Config) *TemplHandler {
+func NewTemplHandler(db *sql.DB, githubService *services.GitHubService, deploymentService *services.DeploymentService, secretsService *services.SecretsService, cfg *config.Config) *TemplHandler {
 	return &TemplHandler{
 		db:                db,
 		githubService:     githubService,
 		deploymentService: deploymentService,
+		secretsService:    secretsService,
 		config:            cfg,
 	}
 }
@@ -620,5 +622,175 @@ func (h *TemplHandler) GetActiveDeployments(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"active_deployments": userActiveDeployments,
 		"count":              len(userActiveDeployments),
+	})
+}
+
+// Secret Management Handlers
+
+func (h *TemplHandler) GetProjectSecrets(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getCurrentUser(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	projectID := chi.URLParam(r, "id")
+	project, err := h.getProject(projectID, user.ID)
+	if err != nil {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	secrets, err := h.secretsService.GetProjectSecrets(project.ID)
+	if err != nil {
+		http.Error(w, "Failed to get secrets", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	component := templates.SecretsList(secrets, project.ID)
+	component.Render(r.Context(), w)
+}
+
+func (h *TemplHandler) CreateProjectSecret(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getCurrentUser(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	projectID := chi.URLParam(r, "id")
+	project, err := h.getProject(projectID, user.ID)
+	if err != nil {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	var input models.SecretInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.secretsService.CreateSecret(project.ID, input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("HX-Trigger", "secretCreated")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Secret created successfully",
+	})
+}
+
+func (h *TemplHandler) UpdateProjectSecret(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getCurrentUser(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	projectID := chi.URLParam(r, "id")
+	secretID := chi.URLParam(r, "secretId")
+
+	project, err := h.getProject(projectID, user.ID)
+	if err != nil {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	secretIDInt, err := strconv.Atoi(secretID)
+	if err != nil {
+		http.Error(w, "Invalid secret ID", http.StatusBadRequest)
+		return
+	}
+
+	var input models.SecretInput
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		http.Error(w, "Invalid JSON", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.secretsService.UpdateSecret(secretIDInt, project.ID, input); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("HX-Trigger", "secretUpdated")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Secret updated successfully",
+	})
+}
+
+func (h *TemplHandler) DeleteProjectSecret(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getCurrentUser(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	projectID := chi.URLParam(r, "id")
+	secretID := chi.URLParam(r, "secretId")
+
+	project, err := h.getProject(projectID, user.ID)
+	if err != nil {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	secretIDInt, err := strconv.Atoi(secretID)
+	if err != nil {
+		http.Error(w, "Invalid secret ID", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.secretsService.DeleteSecret(secretIDInt, project.ID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("HX-Trigger", "secretDeleted")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Secret deleted successfully",
+	})
+}
+
+func (h *TemplHandler) GetSecretValue(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getCurrentUser(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	projectID := chi.URLParam(r, "id")
+	secretID := chi.URLParam(r, "secretId")
+
+	project, err := h.getProject(projectID, user.ID)
+	if err != nil {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	secretIDInt, err := strconv.Atoi(secretID)
+	if err != nil {
+		http.Error(w, "Invalid secret ID", http.StatusBadRequest)
+		return
+	}
+
+	value, err := h.secretsService.GetSecretValue(secretIDInt, project.ID)
+	if err != nil {
+		http.Error(w, "Secret not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"value": value,
 	})
 }

@@ -13,6 +13,7 @@ type Config struct {
 	DeploymentPath     string
 	BaseDomain         string
 	Environment        string
+	EncryptionKey      string
 }
 
 func Load() *Config {
@@ -25,6 +26,7 @@ func Load() *Config {
 		DeploymentPath:     getEnv("DEPLOYMENT_PATH", "./deployments"),
 		BaseDomain:         getEnv("BASE_DOMAIN", "localhost:8080"),
 		Environment:        getEnv("ENVIRONMENT", "development"),
+		EncryptionKey:      getEnv("ENCRYPTION_KEY", "default-encryption-key-change-me-in-production"),
 	}
 }
 

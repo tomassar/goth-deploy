@@ -91,6 +91,17 @@ func createTables(db *sql.DB) error {
 			ended_at DATETIME,
 			FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 		);`,
+		`CREATE TABLE IF NOT EXISTS secrets (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			project_id INTEGER NOT NULL,
+			key_name TEXT NOT NULL,
+			encrypted_value TEXT NOT NULL,
+			description TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
+			UNIQUE(project_id, key_name)
+		);`,
 	}
 
 	for _, query := range queries {
