@@ -7,81 +7,205 @@ import (
 
 templ Dashboard(user *models.User, projects []models.Project) {
 	@Base("Dashboard - GoTH Deployer") {
-		<div class="min-h-screen bg-gray-50">
-			<!-- Navigation -->
-			<nav class="bg-white shadow-sm">
-				<div class="max-w-7xl mx-auto px-6 py-4">
-					<div class="flex justify-between items-center">
-						<div class="flex items-center space-x-2">
-							<div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg"></div>
-							<span class="text-xl font-bold text-gray-900">GoTH Deployer</span>
+		<div class="flex min-h-screen relative z-10">
+			<!-- Sidebar -->
+			<div class="w-64 fixed h-full bg-gradient-to-b from-dark-800/50 to-dark-900/50 glass border-r border-white/10 animate-slide-in">
+				<!-- Logo -->
+				<div class="p-6 border-b border-white/10">
+					<div class="flex items-center space-x-3">
+						<div class="w-10 h-10 bg-gradient-to-r from-neon-blue to-neon-purple rounded-xl flex items-center justify-center animate-pulse-neon">
+							<i class="fas fa-rocket text-white text-lg"></i>
 						</div>
-						<div class="flex items-center space-x-4">
-							<img src={ user.AvatarURL } alt="Avatar" class="w-8 h-8 rounded-full"/>
-							<span class="text-gray-700 font-medium">{ user.Username }</span>
+						<div>
+							<h1 class="text-xl font-bold bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent">GoTH</h1>
+							<p class="text-xs text-gray-400">Deployer</p>
 						</div>
 					</div>
 				</div>
-			</nav>
+
+				<!-- Navigation -->
+				<nav class="p-4 space-y-2">
+					<a href="/dashboard" class="flex items-center space-x-3 p-3 rounded-xl bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 text-white border border-neon-blue/30 group">
+						<i class="fas fa-chart-pie w-5 text-neon-blue group-hover:scale-110 transition-transform"></i>
+						<span class="font-medium">Dashboard</span>
+					</a>
+					<a href="/projects" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-all group">
+						<i class="fas fa-folder w-5 group-hover:scale-110 transition-transform"></i>
+						<span>Projects</span>
+					</a>
+					<a href="#" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-all group">
+						<i class="fas fa-cloud w-5 group-hover:scale-110 transition-transform"></i>
+						<span>Deployments</span>
+					</a>
+					<a href="#" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-all group">
+						<i class="fas fa-chart-line w-5 group-hover:scale-110 transition-transform"></i>
+						<span>Analytics</span>
+					</a>
+					<a href="#" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-white/5 text-gray-300 hover:text-white transition-all group">
+						<i class="fas fa-cog w-5 group-hover:scale-110 transition-transform"></i>
+						<span>Settings</span>
+					</a>
+				</nav>
+
+				<!-- User Profile -->
+				<div class="absolute bottom-6 left-4 right-4">
+					<div class="glass rounded-xl p-4">
+						<div class="flex items-center space-x-3">
+							<img src={ user.AvatarURL } alt="Avatar" class="w-10 h-10 rounded-xl border-2 border-neon-blue/50"/>
+							<div class="flex-1 min-w-0">
+								<p class="text-white font-medium truncate">{ user.Username }</p>
+								<p class="text-gray-400 text-sm truncate">Developer</p>
+							</div>
+							<i class="fas fa-chevron-up text-gray-400 hover:text-white cursor-pointer"></i>
+						</div>
+					</div>
+				</div>
+			</div>
 
 			<!-- Main Content -->
-			<div class="max-w-7xl mx-auto px-6 py-8">
-				<!-- Header -->
-				<div class="flex justify-between items-center mb-8">
-					<div>
-						<h1 class="text-3xl font-bold text-gray-900">Your Projects</h1>
-						<p class="text-gray-600 mt-2">Manage and deploy your GoTH stack applications</p>
+			<div class="flex-1 ml-64">
+				<!-- Top Bar -->
+				<div class="glass border-b border-white/10 p-6">
+					<div class="flex justify-between items-center">
+						<div>
+							<h2 class="text-2xl font-bold text-white">Dashboard</h2>
+							<p class="text-gray-400 mt-1">Welcome back, { user.Username }! Here's what's happening.</p>
+						</div>
+						<button 
+							hx-get="/projects" 
+							hx-target="#project-modal-content"
+							hx-trigger="click"
+							class="gradient-border rounded-xl px-6 py-3 bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 text-white font-semibold hover:from-neon-blue/30 hover:to-neon-purple/30 transition-all duration-300 flex items-center space-x-2 animate-pulse-neon"
+							onclick="document.getElementById('project-modal').classList.remove('hidden')"
+						>
+							<i class="fas fa-plus"></i>
+							<span>New Project</span>
+						</button>
 					</div>
-					<button 
-						hx-get="/projects" 
-						hx-target="#project-modal-content"
-						hx-trigger="click"
-						class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
-						onclick="document.getElementById('project-modal').classList.remove('hidden')"
-					>
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-						</svg>
-						<span>New Project</span>
-					</button>
 				</div>
 
-				<!-- Projects Grid -->
-				<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6" id="projects-grid">
-					if len(projects) == 0 {
-						<div class="col-span-full text-center py-12">
-							<div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-								<svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-								</svg>
+				<!-- Stats Cards -->
+				<div class="p-6">
+					<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+						<!-- Total Projects -->
+						<div class="glass rounded-xl p-6 hover:bg-white/10 transition-all duration-300 animate-fade-in">
+							<div class="flex items-center justify-between">
+								<div>
+									<p class="text-gray-400 text-sm">Total Projects</p>
+									<p class="text-3xl font-bold text-white mt-1">{ strconv.Itoa(len(projects)) }</p>
+								</div>
+								<div class="w-12 h-12 bg-gradient-to-r from-neon-blue to-neon-purple rounded-xl flex items-center justify-center">
+									<i class="fas fa-folder text-white"></i>
+								</div>
 							</div>
-							<h3 class="text-lg font-medium text-gray-900 mb-2">No projects yet</h3>
-							<p class="text-gray-600">Create your first project to get started with deployments</p>
+							<div class="mt-4 flex items-center">
+								<i class="fas fa-arrow-up text-neon-green text-sm"></i>
+								<span class="text-neon-green text-sm ml-1">+12%</span>
+								<span class="text-gray-400 text-sm ml-2">vs last month</span>
+							</div>
 						</div>
-					} else {
-						for _, project := range projects {
-							@ProjectCard(project)
+
+						<!-- Active Deployments -->
+						<div class="glass rounded-xl p-6 hover:bg-white/10 transition-all duration-300 animate-fade-in" style="animation-delay: 0.1s">
+							<div class="flex items-center justify-between">
+								<div>
+									<p class="text-gray-400 text-sm">Active</p>
+									<p class="text-3xl font-bold text-white mt-1">{ strconv.Itoa(countActiveProjects(projects)) }</p>
+								</div>
+								<div class="w-12 h-12 bg-gradient-to-r from-neon-green to-neon-blue rounded-xl flex items-center justify-center">
+									<i class="fas fa-play text-white"></i>
+								</div>
+							</div>
+							<div class="mt-4 flex items-center">
+								<i class="fas fa-arrow-up text-neon-green text-sm"></i>
+								<span class="text-neon-green text-sm ml-1">+8%</span>
+								<span class="text-gray-400 text-sm ml-2">vs last week</span>
+							</div>
+						</div>
+
+						<!-- Deployments Today -->
+						<div class="glass rounded-xl p-6 hover:bg-white/10 transition-all duration-300 animate-fade-in" style="animation-delay: 0.2s">
+							<div class="flex items-center justify-between">
+								<div>
+									<p class="text-gray-400 text-sm">Deployed Today</p>
+									<p class="text-3xl font-bold text-white mt-1">7</p>
+								</div>
+								<div class="w-12 h-12 bg-gradient-to-r from-neon-purple to-neon-pink rounded-xl flex items-center justify-center">
+									<i class="fas fa-rocket text-white"></i>
+								</div>
+							</div>
+							<div class="mt-4 flex items-center">
+								<i class="fas fa-arrow-up text-neon-green text-sm"></i>
+								<span class="text-neon-green text-sm ml-1">+23%</span>
+								<span class="text-gray-400 text-sm ml-2">vs yesterday</span>
+							</div>
+						</div>
+
+						<!-- Success Rate -->
+						<div class="glass rounded-xl p-6 hover:bg-white/10 transition-all duration-300 animate-fade-in" style="animation-delay: 0.3s">
+							<div class="flex items-center justify-between">
+								<div>
+									<p class="text-gray-400 text-sm">Success Rate</p>
+									<p class="text-3xl font-bold text-white mt-1">98.5%</p>
+								</div>
+								<div class="w-12 h-12 bg-gradient-to-r from-neon-yellow to-neon-green rounded-xl flex items-center justify-center">
+									<i class="fas fa-check text-white"></i>
+								</div>
+							</div>
+							<div class="mt-4 flex items-center">
+								<i class="fas fa-arrow-up text-neon-green text-sm"></i>
+								<span class="text-neon-green text-sm ml-1">+0.2%</span>
+								<span class="text-gray-400 text-sm ml-2">vs last week</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- Projects Section -->
+					<div class="flex justify-between items-center mb-6">
+						<div>
+							<h3 class="text-xl font-bold text-white">Your Projects</h3>
+							<p class="text-gray-400">Manage and deploy your applications</p>
+						</div>
+						<div class="flex items-center space-x-2">
+							<button class="glass rounded-lg px-4 py-2 text-gray-300 hover:text-white transition-colors">
+								<i class="fas fa-th-large"></i>
+							</button>
+							<button class="glass rounded-lg px-4 py-2 text-gray-300 hover:text-white transition-colors">
+								<i class="fas fa-list"></i>
+							</button>
+						</div>
+					</div>
+
+					<!-- Projects Grid -->
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="projects-grid">
+						if len(projects) == 0 {
+							<div class="col-span-full">
+								@EmptyState()
+							</div>
+						} else {
+							for i, project := range projects {
+								@ProjectCard(project, i)
+							}
 						}
-					}
+					</div>
 				</div>
 			</div>
 
 			<!-- Project Modal -->
-			<div id="project-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-				<div class="flex items-center justify-center min-h-screen p-4">
-					<div class="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-						<div class="p-6">
-							<div class="flex justify-between items-center mb-4">
-								<h2 class="text-xl font-bold text-gray-900">Create New Project</h2>
-								<button onclick="document.getElementById('project-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600">
-									<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-									</svg>
-								</button>
+			<div id="project-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden z-50 flex items-center justify-center">
+				<div class="glass rounded-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto border border-white/20">
+					<div class="p-8">
+						<div class="flex justify-between items-center mb-6">
+							<div>
+								<h2 class="text-2xl font-bold text-white">Create New Project</h2>
+								<p class="text-gray-400 mt-1">Deploy your GoTH stack application</p>
 							</div>
-							<div id="project-modal-content">
-								<!-- Content loaded via HTMX -->
-							</div>
+							<button onclick="document.getElementById('project-modal').classList.add('hidden')" class="text-gray-400 hover:text-white transition-colors">
+								<i class="fas fa-times text-xl"></i>
+							</button>
+						</div>
+						<div id="project-modal-content">
+							<!-- Content loaded via HTMX -->
 						</div>
 					</div>
 				</div>
@@ -92,60 +216,135 @@ templ Dashboard(user *models.User, projects []models.Project) {
 		<script>
 			document.body.addEventListener('projectCreated', function(evt) {
 				document.getElementById('project-modal').classList.add('hidden');
-				location.reload(); // Refresh to show new project
+				location.reload();
+			});
+			
+			// Add some dynamic interactions
+			document.addEventListener('DOMContentLoaded', function() {
+				// Animate stats on load
+				const statCards = document.querySelectorAll('[class*="animate-fade-in"]');
+				statCards.forEach((card, index) => {
+					setTimeout(() => {
+						card.style.opacity = '1';
+						card.style.transform = 'translateY(0)';
+					}, index * 100);
+				});
 			});
 		</script>
 	}
 }
 
-templ ProjectCard(project models.Project) {
-	<div class="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow">
+templ ProjectCard(project models.Project, index int) {
+	<div class="glass rounded-xl p-6 hover:bg-white/10 transition-all duration-300 animate-fade-in group" style={ "animation-delay: " + strconv.Itoa(index*100) + "ms" }>
 		<div class="flex justify-between items-start mb-4">
-			<h3 class="text-lg font-semibold text-gray-900">{ project.Name }</h3>
-			<div class={ "px-2 py-1 rounded-full text-xs font-medium", statusColor(project.Status) }>
+			<div class="flex items-center space-x-3">
+				<div class="w-12 h-12 bg-gradient-to-r from-neon-blue to-neon-purple rounded-xl flex items-center justify-center">
+					<i class="fas fa-code text-white"></i>
+				</div>
+				<div>
+					<h3 class="text-lg font-semibold text-white group-hover:text-neon-blue transition-colors">{ project.Name }</h3>
+					<p class="text-gray-400 text-sm">{ project.Branch }</p>
+				</div>
+			</div>
+			<div class={ "px-3 py-1 rounded-full text-xs font-medium border", statusColorNew(project.Status) }>
+				<i class={ statusIcon(project.Status) + " mr-1" }></i>
 				{ project.Status }
 			</div>
 		</div>
 		
-		<div class="space-y-2 mb-4">
-			<div class="flex items-center text-sm text-gray-600">
-				<svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-					<path fill-rule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" clip-rule="evenodd"></path>
-				</svg>
-				{ project.Branch }
+		<div class="space-y-3 mb-4">
+			<div class="flex items-center text-sm text-gray-300">
+				<i class="fab fa-github w-4 mr-2 text-gray-400"></i>
+				<span class="truncate">{ project.Repository }</span>
 			</div>
-			<div class="flex items-center text-sm text-gray-600">
-				<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-				</svg>
-				{ project.Subdomain }.localhost:8080
+			<div class="flex items-center text-sm text-gray-300">
+				<i class="fas fa-link w-4 mr-2 text-gray-400"></i>
+				<span class="truncate">{ project.Subdomain }.localhost:8080</span>
+				<button class="ml-2 text-neon-blue hover:text-neon-purple transition-colors" onclick="navigator.clipboard.writeText('http://{ project.Subdomain }.localhost:8080')">
+					<i class="fas fa-copy text-xs"></i>
+				</button>
 			</div>
 		</div>
 
 		<div class="flex space-x-2">
-			<a href={ templ.SafeURL("/projects/" + templ.EscapeString(strconv.Itoa(project.ID))) } class="flex-1 bg-blue-50 text-blue-600 px-4 py-2 rounded-lg text-center text-sm font-medium hover:bg-blue-100 transition-colors">
-				View Details
+			<a href={ templ.SafeURL("/projects/" + templ.EscapeString(strconv.Itoa(project.ID))) } class="flex-1 glass rounded-lg px-4 py-2 text-center text-sm font-medium text-neon-blue hover:bg-neon-blue/20 transition-all border border-neon-blue/30">
+				<i class="fas fa-eye mr-1"></i>
+				Details
 			</a>
 			<button 
 				hx-post={ "/projects/" + strconv.Itoa(project.ID) + "/deploy" }
 				hx-trigger="click"
-				class="flex-1 bg-green-50 text-green-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
+				class="flex-1 bg-gradient-to-r from-neon-green/20 to-neon-blue/20 rounded-lg px-4 py-2 text-sm font-medium text-white hover:from-neon-green/30 hover:to-neon-blue/30 transition-all border border-neon-green/30"
 			>
+				<i class="fas fa-rocket mr-1"></i>
 				Deploy
 			</button>
 		</div>
+		
+		<!-- Deployment progress bar (if building) -->
+		if project.Status == "building" {
+			<div class="mt-4">
+				<div class="h-1 bg-dark-700 rounded-full overflow-hidden">
+					<div class="h-full bg-gradient-to-r from-neon-blue to-neon-purple animate-pulse w-3/4 transition-all duration-500"></div>
+				</div>
+				<p class="text-xs text-gray-400 mt-1">Building and deploying...</p>
+			</div>
+		}
 	</div>
 }
 
-func statusColor(status string) string {
+templ EmptyState() {
+	<div class="col-span-full glass rounded-xl p-12 text-center">
+		<div class="w-24 h-24 bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-float">
+			<i class="fas fa-rocket text-4xl text-neon-blue"></i>
+		</div>
+		<h3 class="text-xl font-semibold text-white mb-2">No projects yet</h3>
+		<p class="text-gray-400 mb-6 max-w-md mx-auto">Create your first project to get started with deployments. Connect your GitHub repository and deploy in minutes!</p>
+		<button 
+			hx-get="/projects" 
+			hx-target="#project-modal-content"
+			hx-trigger="click"
+			class="gradient-border rounded-xl px-8 py-3 bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 text-white font-semibold hover:from-neon-blue/30 hover:to-neon-purple/30 transition-all duration-300"
+			onclick="document.getElementById('project-modal').classList.remove('hidden')"
+		>
+			<i class="fas fa-plus mr-2"></i>
+			Create Your First Project
+		</button>
+	</div>
+}
+
+func statusColorNew(status string) string {
 	switch status {
 	case "active":
-		return "bg-green-100 text-green-800"
+		return "bg-neon-green/20 text-neon-green border-neon-green/30"
 	case "building":
-		return "bg-yellow-100 text-yellow-800"
+		return "bg-neon-yellow/20 text-neon-yellow border-neon-yellow/30"
 	case "failed":
-		return "bg-red-100 text-red-800"
+		return "bg-neon-pink/20 text-neon-pink border-neon-pink/30"
 	default:
-		return "bg-gray-100 text-gray-800"
+		return "bg-gray-600/20 text-gray-400 border-gray-600/30"
 	}
+}
+
+func statusIcon(status string) string {
+	switch status {
+	case "active":
+		return "fas fa-check-circle"
+	case "building":
+		return "fas fa-spinner fa-spin"
+	case "failed":
+		return "fas fa-exclamation-circle"
+	default:
+		return "fas fa-circle"
+	}
+}
+
+func countActiveProjects(projects []models.Project) int {
+	count := 0
+	for _, project := range projects {
+		if project.Status == "active" {
+			count++
+		}
+	}
+	return count
 } 

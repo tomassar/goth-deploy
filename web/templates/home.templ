@@ -2,18 +2,21 @@ package templates
 
 templ Home() {
 	@Base("GoTH Deployer - Deploy your GoTH apps instantly") {
-		<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+		<div class="min-h-screen relative z-10">
 			<!-- Navigation -->
-			<nav class="p-6">
+			<nav class="glass border-b border-white/10 p-6">
 				<div class="max-w-7xl mx-auto flex justify-between items-center">
-					<div class="flex items-center space-x-2">
-						<div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg"></div>
-						<span class="text-xl font-bold text-gray-900">GoTH Deployer</span>
+					<div class="flex items-center space-x-3">
+						<div class="w-10 h-10 bg-gradient-to-r from-neon-blue to-neon-purple rounded-xl flex items-center justify-center animate-pulse-neon">
+							<i class="fas fa-rocket text-white text-lg"></i>
+						</div>
+						<div>
+							<h1 class="text-xl font-bold bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent">GoTH</h1>
+							<p class="text-xs text-gray-400">Deployer</p>
+						</div>
 					</div>
-					<a href="/auth/github" class="bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors flex items-center space-x-2">
-						<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-							<path fill-rule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" clip-rule="evenodd"></path>
-						</svg>
+					<a href="/auth/github" class="gradient-border rounded-xl px-6 py-3 bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 text-white font-semibold hover:from-neon-blue/30 hover:to-neon-purple/30 transition-all duration-300 flex items-center space-x-2">
+						<i class="fab fa-github"></i>
 						<span>Sign in with GitHub</span>
 					</a>
 				</div>
@@ -22,93 +25,212 @@ templ Home() {
 			<!-- Hero Section -->
 			<div class="max-w-7xl mx-auto px-6 py-20">
 				<div class="text-center">
-					<h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-						Deploy Your 
-						<span class="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">GoTH Stack</span> 
-						Apps Instantly
-					</h1>
-					<p class="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-						The easiest way to deploy Golang + HTMX + Tailwind + Templ applications. 
-						Connect your GitHub repository and get your app live in minutes with automatic subdomain creation.
-					</p>
-					<div class="flex flex-col sm:flex-row gap-4 justify-center">
-						<a href="/auth/github" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:from-blue-600 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl">
-							Get Started Free
-						</a>
-						<a href="#features" class="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg text-lg font-semibold hover:border-gray-400 transition-colors">
-							Learn More
-						</a>
+					<div class="animate-fade-in">
+						<h1 class="text-6xl md:text-8xl font-bold mb-6">
+							<span class="text-white">Deploy Your</span>
+							<br/>
+							<span class="bg-gradient-to-r from-neon-blue via-neon-purple to-neon-pink bg-clip-text text-transparent animate-glow">GoTH Stack</span>
+							<br/>
+							<span class="text-white">Apps Instantly</span>
+						</h1>
+						<p class="text-xl text-gray-300 mb-8 max-w-4xl mx-auto leading-relaxed">
+							The most <span class="text-neon-blue font-semibold">advanced deployment platform</span> specifically designed for the GoTH stack. 
+							Connect your GitHub repository and watch your <span class="text-neon-purple font-semibold">Golang + HTMX + Tailwind + Templ</span> applications come to life in seconds.
+						</p>
+						<div class="flex flex-col sm:flex-row gap-6 justify-center mb-12">
+							<a href="/auth/github" class="gradient-border rounded-xl px-8 py-4 bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 text-white text-lg font-semibold hover:from-neon-blue/30 hover:to-neon-purple/30 transition-all duration-300 flex items-center space-x-3 animate-pulse-neon">
+								<i class="fab fa-github text-xl"></i>
+								<span>Get Started Free</span>
+								<i class="fas fa-arrow-right"></i>
+							</a>
+							<a href="#features" class="glass rounded-xl px-8 py-4 text-gray-300 text-lg font-semibold hover:text-white transition-all duration-300 border border-white/20 hover:border-neon-blue/50">
+								<i class="fas fa-play mr-2"></i>
+								Watch Demo
+							</a>
+						</div>
 					</div>
-				</div>
 
-				<!-- Hero Illustration -->
-				<div class="mt-16 relative">
-					<div class="bg-white rounded-2xl shadow-2xl p-8 max-w-4xl mx-auto">
-						<div class="flex items-center space-x-2 mb-4">
-							<div class="w-3 h-3 bg-red-500 rounded-full"></div>
-							<div class="w-3 h-3 bg-yellow-500 rounded-full"></div>
-							<div class="w-3 h-3 bg-green-500 rounded-full"></div>
+					<!-- Hero Terminal -->
+					<div class="relative animate-fade-in" style="animation-delay: 0.2s">
+						<div class="glass rounded-2xl p-8 max-w-5xl mx-auto border border-white/20 animate-float">
+							<div class="flex items-center space-x-2 mb-6">
+								<div class="w-4 h-4 bg-neon-pink rounded-full animate-pulse"></div>
+								<div class="w-4 h-4 bg-neon-yellow rounded-full animate-pulse" style="animation-delay: 0.1s"></div>
+								<div class="w-4 h-4 bg-neon-green rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
+								<div class="flex-1 text-center">
+									<span class="text-gray-400 text-sm font-mono">goth-deployer.terminal</span>
+								</div>
+							</div>
+							<div class="bg-dark-900/80 text-neon-green p-8 rounded-xl font-mono text-sm md:text-base leading-relaxed border border-neon-blue/20">
+								<div class="mb-3">
+									<span class="text-neon-blue">$</span> 
+									<span class="text-white">git push origin main</span>
+								</div>
+								<div class="mb-3">
+									<span class="text-neon-green">✓</span> 
+									<span class="text-gray-300">Repository connected to GoTH Deployer</span>
+								</div>
+								<div class="mb-3">
+									<span class="text-neon-green">✓</span> 
+									<span class="text-gray-300">Building Go application...</span>
+								</div>
+								<div class="mb-3">
+									<span class="text-neon-green">✓</span> 
+									<span class="text-gray-300">Generating templ files...</span>
+								</div>
+								<div class="mb-3">
+									<span class="text-neon-green">✓</span> 
+									<span class="text-gray-300">Optimizing Tailwind CSS...</span>
+								</div>
+								<div class="mb-3">
+									<span class="text-neon-green">✓</span> 
+									<span class="text-gray-300">Deployment successful in 12.3s</span>
+								</div>
+								<div class="text-neon-purple font-semibold">
+									<i class="fas fa-rocket mr-2"></i>
+									Your app is live at: <span class="text-neon-blue underline">https://my-goth-app-1337.deployer.dev</span>
+								</div>
+							</div>
 						</div>
-						<div class="bg-gray-900 text-green-400 p-6 rounded-lg font-mono text-sm">
-							<div class="mb-2">$ git push origin main</div>
-							<div class="mb-2">✓ Repository connected</div>
-							<div class="mb-2">✓ Building application...</div>
-							<div class="mb-2">✓ Generating templ files...</div>
-							<div class="mb-2">✓ Deployment successful</div>
-							<div class="text-blue-400">🚀 Your app is live at: https://my-app-123.goth-deploy.com</div>
-						</div>
+						<!-- Floating elements -->
+						<div class="absolute -top-8 -left-8 w-16 h-16 bg-gradient-to-r from-neon-blue to-neon-purple rounded-full opacity-20 animate-float"></div>
+						<div class="absolute -bottom-8 -right-8 w-20 h-20 bg-gradient-to-r from-neon-purple to-neon-pink rounded-full opacity-20 animate-float" style="animation-delay: 1s"></div>
 					</div>
 				</div>
 			</div>
 
 			<!-- Features Section -->
 			<div id="features" class="max-w-7xl mx-auto px-6 py-20">
-				<div class="text-center mb-16">
-					<h2 class="text-4xl font-bold text-gray-900 mb-4">Why Choose GoTH Deployer?</h2>
-					<p class="text-xl text-gray-600">Built specifically for the GoTH stack with modern deployment practices</p>
+				<div class="text-center mb-16 animate-fade-in">
+					<h2 class="text-5xl font-bold text-white mb-6">
+						Why Choose 
+						<span class="bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent">GoTH Deployer</span>?
+					</h2>
+					<p class="text-xl text-gray-300 max-w-3xl mx-auto">
+						Built from the ground up for modern Go web applications with HTMX, Tailwind, and Templ
+					</p>
 				</div>
 
 				<div class="grid md:grid-cols-3 gap-8">
-					<div class="bg-white p-8 rounded-xl shadow-lg">
-						<div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
-							<svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-							</svg>
+					<div class="glass rounded-2xl p-8 hover:bg-white/10 transition-all duration-300 group animate-fade-in border border-white/10">
+						<div class="w-16 h-16 bg-gradient-to-r from-neon-blue to-neon-purple rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+							<i class="fas fa-bolt text-white text-2xl"></i>
 						</div>
-						<h3 class="text-xl font-semibold text-gray-900 mb-3">Lightning Fast</h3>
-						<p class="text-gray-600">Deploy in seconds with optimized build processes specifically designed for Go + HTMX applications.</p>
+						<h3 class="text-2xl font-semibold text-white mb-4 group-hover:text-neon-blue transition-colors">Lightning Fast</h3>
+						<p class="text-gray-300 leading-relaxed">Deploy in seconds with optimized build processes specifically designed for Go + HTMX applications. Zero cold starts, instant scaling.</p>
+						<div class="mt-6 flex items-center text-neon-blue">
+							<span class="text-sm font-semibold">12.3s average deploy time</span>
+							<i class="fas fa-arrow-right ml-2"></i>
+						</div>
 					</div>
 
-					<div class="bg-white p-8 rounded-xl shadow-lg">
-						<div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
-							<svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-							</svg>
+					<div class="glass rounded-2xl p-8 hover:bg-white/10 transition-all duration-300 group animate-fade-in border border-white/10" style="animation-delay: 0.1s">
+						<div class="w-16 h-16 bg-gradient-to-r from-neon-green to-neon-blue rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+							<i class="fas fa-magic text-white text-2xl"></i>
 						</div>
-						<h3 class="text-xl font-semibold text-gray-900 mb-3">Zero Configuration</h3>
-						<p class="text-gray-600">Just connect your GitHub repo. We handle templ generation, Go builds, and everything else automatically.</p>
+						<h3 class="text-2xl font-semibold text-white mb-4 group-hover:text-neon-green transition-colors">Zero Configuration</h3>
+						<p class="text-gray-300 leading-relaxed">Just connect your GitHub repo. We handle templ generation, Go builds, Tailwind optimization, and everything else automatically.</p>
+						<div class="mt-6 flex items-center text-neon-green">
+							<span class="text-sm font-semibold">100% automated setup</span>
+							<i class="fas fa-arrow-right ml-2"></i>
+						</div>
 					</div>
 
-					<div class="bg-white p-8 rounded-xl shadow-lg">
-						<div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
-							<svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM21 5a2 2 0 00-2-2h-4a2 2 0 00-2 2v12a4 4 0 004 4h4a2 2 0 002-2V5z"></path>
-							</svg>
+					<div class="glass rounded-2xl p-8 hover:bg-white/10 transition-all duration-300 group animate-fade-in border border-white/10" style="animation-delay: 0.2s">
+						<div class="w-16 h-16 bg-gradient-to-r from-neon-purple to-neon-pink rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+							<i class="fas fa-globe text-white text-2xl"></i>
 						</div>
-						<h3 class="text-xl font-semibold text-gray-900 mb-3">Custom Subdomains</h3>
-						<p class="text-gray-600">Each deployment gets its own subdomain. Perfect for staging, testing, and production environments.</p>
+						<h3 class="text-2xl font-semibold text-white mb-4 group-hover:text-neon-purple transition-colors">Custom Subdomains</h3>
+						<p class="text-gray-300 leading-relaxed">Each deployment gets its own subdomain with SSL. Perfect for staging, testing, and production environments with instant DNS.</p>
+						<div class="mt-6 flex items-center text-neon-purple">
+							<span class="text-sm font-semibold">Unlimited subdomains</span>
+							<i class="fas fa-arrow-right ml-2"></i>
+						</div>
+					</div>
+				</div>
+
+				<!-- Tech Stack Grid -->
+				<div class="mt-20 text-center">
+					<h3 class="text-3xl font-bold text-white mb-12">Built for the Modern Go Stack</h3>
+					<div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+						<div class="glass rounded-xl p-6 hover:bg-white/10 transition-all group">
+							<div class="w-12 h-12 bg-gradient-to-r from-neon-blue to-neon-purple rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+								<i class="fab fa-golang text-white text-xl"></i>
+							</div>
+							<h4 class="text-white font-semibold">Golang</h4>
+							<p class="text-gray-400 text-sm mt-1">Fast & Reliable</p>
+						</div>
+						<div class="glass rounded-xl p-6 hover:bg-white/10 transition-all group">
+							<div class="w-12 h-12 bg-gradient-to-r from-neon-green to-neon-blue rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+								<i class="fas fa-code text-white text-xl"></i>
+							</div>
+							<h4 class="text-white font-semibold">HTMX</h4>
+							<p class="text-gray-400 text-sm mt-1">Dynamic UIs</p>
+						</div>
+						<div class="glass rounded-xl p-6 hover:bg-white/10 transition-all group">
+							<div class="w-12 h-12 bg-gradient-to-r from-neon-purple to-neon-pink rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+								<i class="fas fa-paint-brush text-white text-xl"></i>
+							</div>
+							<h4 class="text-white font-semibold">Tailwind</h4>
+							<p class="text-gray-400 text-sm mt-1">Beautiful CSS</p>
+						</div>
+						<div class="glass rounded-xl p-6 hover:bg-white/10 transition-all group">
+							<div class="w-12 h-12 bg-gradient-to-r from-neon-yellow to-neon-green rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+								<i class="fas fa-file-code text-white text-xl"></i>
+							</div>
+							<h4 class="text-white font-semibold">Templ</h4>
+							<p class="text-gray-400 text-sm mt-1">Type-safe HTML</p>
+						</div>
 					</div>
 				</div>
 			</div>
 
-			<!-- Footer -->
-			<footer class="bg-gray-900 text-white py-12">
-				<div class="max-w-7xl mx-auto px-6 text-center">
-					<div class="flex items-center justify-center space-x-2 mb-4">
-						<div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg"></div>
-						<span class="text-xl font-bold">GoTH Deployer</span>
+			<!-- CTA Section -->
+			<div class="max-w-7xl mx-auto px-6 py-20">
+				<div class="glass rounded-3xl p-12 text-center border border-white/20 relative overflow-hidden">
+					<div class="relative z-10">
+						<h2 class="text-4xl md:text-5xl font-bold text-white mb-6">
+							Ready to Deploy?
+						</h2>
+						<p class="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+							Join thousands of developers deploying GoTH stack applications with confidence.
+						</p>
+						<a href="/auth/github" class="gradient-border rounded-xl px-12 py-4 bg-gradient-to-r from-neon-blue/20 to-neon-purple/20 text-white text-xl font-semibold hover:from-neon-blue/30 hover:to-neon-purple/30 transition-all duration-300 inline-flex items-center space-x-3 animate-pulse-neon">
+							<i class="fab fa-github text-2xl"></i>
+							<span>Start Deploying Now</span>
+							<i class="fas fa-rocket"></i>
+						</a>
 					</div>
-					<p class="text-gray-400">Deploy your GoTH stack applications with confidence</p>
+					<!-- Background decoration -->
+					<div class="absolute inset-0 bg-gradient-to-r from-neon-blue/5 to-neon-purple/5"></div>
+					<div class="absolute -top-24 -right-24 w-48 h-48 bg-gradient-to-r from-neon-blue to-neon-purple rounded-full opacity-10 animate-float"></div>
+					<div class="absolute -bottom-24 -left-24 w-56 h-56 bg-gradient-to-r from-neon-purple to-neon-pink rounded-full opacity-10 animate-float" style="animation-delay: 2s"></div>
+				</div>
+			</div>
+
+			<!-- Footer -->
+			<footer class="border-t border-white/10 py-12">
+				<div class="max-w-7xl mx-auto px-6 text-center">
+					<div class="flex items-center justify-center space-x-3 mb-6">
+						<div class="w-10 h-10 bg-gradient-to-r from-neon-blue to-neon-purple rounded-xl flex items-center justify-center">
+							<i class="fas fa-rocket text-white text-lg"></i>
+						</div>
+						<div>
+							<h1 class="text-xl font-bold bg-gradient-to-r from-neon-blue to-neon-purple bg-clip-text text-transparent">GoTH Deployer</h1>
+						</div>
+					</div>
+					<p class="text-gray-400">Deploy your GoTH stack applications with confidence and style</p>
+					<div class="mt-6 flex justify-center space-x-6">
+						<a href="#" class="text-gray-400 hover:text-neon-blue transition-colors">
+							<i class="fab fa-github"></i>
+						</a>
+						<a href="#" class="text-gray-400 hover:text-neon-blue transition-colors">
+							<i class="fab fa-twitter"></i>
+						</a>
+						<a href="#" class="text-gray-400 hover:text-neon-blue transition-colors">
+							<i class="fab fa-discord"></i>
+						</a>
+					</div>
 				</div>
 			</footer>
 		</div>
