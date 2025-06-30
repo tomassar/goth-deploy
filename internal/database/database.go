@@ -74,6 +74,7 @@ func createTables(db *sql.DB) error {
 			branch TEXT DEFAULT 'main',
 			subdomain TEXT UNIQUE NOT NULL,
 			status TEXT DEFAULT 'idle',
+			build_logs TEXT,
 			last_deploy_at DATETIME,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -85,6 +86,7 @@ func createTables(db *sql.DB) error {
 			status TEXT DEFAULT 'pending',
 			commit_sha TEXT,
 			logs TEXT,
+			error_message TEXT,
 			started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			ended_at DATETIME,
 			FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
@@ -95,6 +97,16 @@ func createTables(db *sql.DB) error {
 		if _, err := db.Exec(query); err != nil {
 			return err
 		}
+	}
+
+	// Add new columns to existing tables if they don't exist
+	alterQueries := []string{
+		`ALTER TABLE projects ADD COLUMN build_logs TEXT DEFAULT '';`,
+		`ALTER TABLE deployments ADD COLUMN error_message TEXT DEFAULT '';`,
+	}
+
+	for _, query := range alterQueries {
+		db.Exec(query) // Ignore errors for existing columns
 	}
 
 	return nil

@@ -2,6 +2,7 @@ package services
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
@@ -42,22 +43,34 @@ func (s *DeploymentService) Deploy(ctx context.Context, project *models.Project,
 
 	// Create deployment directory if it doesn't exist
 	if err := os.MkdirAll(projectPath, 0755); err != nil {
-		return fmt.Errorf("failed to create deployment directory: %w", err)
+		buildError := fmt.Sprintf("Failed to create deployment directory: %v", err)
+		s.saveBuildLogs(project.ID, buildError)
+		return fmt.Errorf(buildError)
 	}
 
 	// Clone or pull repository
 	if err := s.cloneOrPullRepo(ctx, project.Repository, project.Branch, projectPath); err != nil {
-		return fmt.Errorf("failed to clone/pull repository: %w", err)
+		buildError := fmt.Sprintf("Failed to clone/pull repository: %v", err)
+		s.saveBuildLogs(project.ID, buildError)
+		return fmt.Errorf(buildError)
 	}
 
-	// Build the project
-	if err := s.buildProject(ctx, projectPath); err != nil {
-		return fmt.Errorf("failed to build project: %w", err)
+	// Build the project and capture logs
+	buildLogs, err := s.buildProjectWithLogs(ctx, projectPath)
+	if err != nil {
+		errorMsg := fmt.Sprintf("Build failed: %v", err)
+		s.saveBuildLogs(project.ID, fmt.Sprintf("%s\n\nBuild Output:\n%s", errorMsg, buildLogs))
+		return fmt.Errorf(errorMsg)
 	}
+
+	// Save successful build logs
+	s.saveBuildLogs(project.ID, fmt.Sprintf("Build completed successfully at %s\n\nBuild Output:\n%s", time.Now().Format("2006-01-02 15:04:05"), buildLogs))
 
 	// Start the service
 	if err := s.startService(ctx, project.Subdomain, projectPath); err != nil {
-		return fmt.Errorf("failed to start service: %w", err)
+		errorMsg := fmt.Sprintf("Failed to start service: %v", err)
+		s.saveBuildLogs(project.ID, fmt.Sprintf("Service start failed: %v\n\nPrevious build was successful.", err))
+		return fmt.Errorf(errorMsg)
 	}
 
 	return nil
@@ -82,37 +95,72 @@ func (s *DeploymentService) cloneOrPullRepo(ctx context.Context, repoURL, branch
 	}
 }
 
-func (s *DeploymentService) buildProject(ctx context.Context, projectPath string) error {
+func (s *DeploymentService) buildProjectWithLogs(ctx context.Context, projectPath string) (string, error) {
+	var logBuffer bytes.Buffer
+
 	// Check if go.mod exists
 	if _, err := os.Stat(filepath.Join(projectPath, "go.mod")); err != nil {
-		return fmt.Errorf("go.mod not found in project")
+		return "", fmt.Errorf("go.mod not found in project")
 	}
 
+	logBuffer.WriteString("=== Starting Build Process ===\n")
+	logBuffer.WriteString(fmt.Sprintf("Build started at: %s\n", time.Now().Format("2006-01-02 15:04:05")))
+	logBuffer.WriteString(fmt.Sprintf("Project path: %s\n\n", projectPath))
+
 	// Download dependencies
+	logBuffer.WriteString("=== Downloading Dependencies ===\n")
 	cmd := exec.CommandContext(ctx, "go", "mod", "download")
 	cmd.Dir = projectPath
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to download dependencies: %w", err)
+
+	output, err := cmd.CombinedOutput()
+	logBuffer.Write(output)
+	logBuffer.WriteString("\n")
+
+	if err != nil {
+		logBuffer.WriteString(fmt.Sprintf("ERROR: Failed to download dependencies: %v\n", err))
+		return logBuffer.String(), fmt.Errorf("failed to download dependencies: %w", err)
 	}
+	logBuffer.WriteString("Dependencies downloaded successfully\n\n")
 
 	// Check if templ files exist and generate them
 	templFiles, _ := filepath.Glob(filepath.Join(projectPath, "**/*.templ"))
 	if len(templFiles) > 0 {
+		logBuffer.WriteString("=== Generating Templ Files ===\n")
+		logBuffer.WriteString(fmt.Sprintf("Found %d templ files\n", len(templFiles)))
+
 		cmd = exec.CommandContext(ctx, "templ", "generate")
 		cmd.Dir = projectPath
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to generate templ files: %w", err)
+
+		output, err := cmd.CombinedOutput()
+		logBuffer.Write(output)
+		logBuffer.WriteString("\n")
+
+		if err != nil {
+			logBuffer.WriteString(fmt.Sprintf("ERROR: Failed to generate templ files: %v\n", err))
+			return logBuffer.String(), fmt.Errorf("failed to generate templ files: %w", err)
 		}
+		logBuffer.WriteString("Templ files generated successfully\n\n")
 	}
 
 	// Build the application
-	cmd = exec.CommandContext(ctx, "go", "build", "-o", "app", "./cmd/server")
+	logBuffer.WriteString("=== Building Application ===\n")
+	cmd = exec.CommandContext(ctx, "go", "build", "-v", "-o", "app", "./cmd/server")
 	cmd.Dir = projectPath
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to build application: %w", err)
+
+	output, err = cmd.CombinedOutput()
+	logBuffer.Write(output)
+	logBuffer.WriteString("\n")
+
+	if err != nil {
+		logBuffer.WriteString(fmt.Sprintf("ERROR: Failed to build application: %v\n", err))
+		return logBuffer.String(), fmt.Errorf("failed to build application: %w", err)
 	}
 
-	return nil
+	logBuffer.WriteString("Application built successfully\n")
+	logBuffer.WriteString(fmt.Sprintf("Build completed at: %s\n", time.Now().Format("2006-01-02 15:04:05")))
+	logBuffer.WriteString("=== Build Process Complete ===\n")
+
+	return logBuffer.String(), nil
 }
 
 func (s *DeploymentService) startService(ctx context.Context, subdomain, projectPath string) error {
@@ -397,7 +445,7 @@ func (s *DeploymentService) RestartActiveDeployments(db *sql.DB) error {
 			fmt.Printf("Built app missing for %s, attempting rebuild...\n", subdomain)
 
 			// Try to rebuild the project
-			if err := s.buildProject(context.Background(), projectPath); err != nil {
+			if _, err := s.buildProjectWithLogs(context.Background(), projectPath); err != nil {
 				fmt.Printf("Failed to rebuild %s: %v\n", subdomain, err)
 				s.updateProjectStatus(db, id, "failed")
 				failed++
@@ -449,4 +497,68 @@ func (s *DeploymentService) updateProjectStatus(db *sql.DB, projectID int, statu
 	if err != nil {
 		fmt.Printf("Failed to update project %d status to %s: %v\n", projectID, status, err)
 	}
+}
+
+// saveBuildLogs saves build logs to the database
+func (s *DeploymentService) saveBuildLogs(projectID int, logs string) {
+	// For now, just print to console since we don't have database access in this service
+	// The actual saving will be handled by the handlers using SaveBuildLogsToDatabase
+	fmt.Printf("Build logs for project %d:\n%s\n", projectID, logs)
+}
+
+// SaveBuildLogsToDatabase saves build logs to the database (called from handlers)
+func (s *DeploymentService) SaveBuildLogsToDatabase(db *sql.DB, projectID int, logs string) error {
+	_, err := db.Exec(`
+		UPDATE projects SET build_logs = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+	`, logs, projectID)
+	return err
+}
+
+// GetProjectDeployments gets deployment history for a project
+func (s *DeploymentService) GetProjectDeployments(db *sql.DB, projectID int) ([]models.Deployment, error) {
+	rows, err := db.Query(`
+		SELECT id, project_id, status, commit_sha, logs, error_message, started_at, ended_at
+		FROM deployments WHERE project_id = ? ORDER BY started_at DESC LIMIT 10
+	`, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var deployments []models.Deployment
+	for rows.Next() {
+		var deployment models.Deployment
+		err := rows.Scan(&deployment.ID, &deployment.ProjectID, &deployment.Status,
+			&deployment.CommitSHA, &deployment.Logs, &deployment.ErrorMessage,
+			&deployment.StartedAt, &deployment.EndedAt)
+		if err != nil {
+			return nil, err
+		}
+		deployments = append(deployments, deployment)
+	}
+
+	return deployments, nil
+}
+
+// CreateDeploymentRecord creates a new deployment record
+func (s *DeploymentService) CreateDeploymentRecord(db *sql.DB, projectID int, status, commitSHA string) (int, error) {
+	result, err := db.Exec(`
+		INSERT INTO deployments (project_id, status, commit_sha, started_at)
+		VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+	`, projectID, status, commitSHA)
+	if err != nil {
+		return 0, err
+	}
+
+	id, err := result.LastInsertId()
+	return int(id), err
+}
+
+// UpdateDeploymentRecord updates a deployment record with final status and logs
+func (s *DeploymentService) UpdateDeploymentRecord(db *sql.DB, deploymentID int, status, logs, errorMessage string) error {
+	_, err := db.Exec(`
+		UPDATE deployments SET status = ?, logs = ?, error_message = ?, ended_at = CURRENT_TIMESTAMP
+		WHERE id = ?
+	`, status, logs, errorMessage, deploymentID)
+	return err
 }
