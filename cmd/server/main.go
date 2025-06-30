@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -43,20 +44,32 @@ func main() {
 
 	// Initialize services
 	githubService := services.NewGitHubService(cfg.GitHubClientID, cfg.GitHubClientSecret)
-	deploymentService := services.NewDeploymentService(cfg.DeploymentPath, cfg.BaseDomain)
+	proxyService := services.NewProxyService()
+	deploymentService := services.NewDeploymentService(cfg.DeploymentPath, cfg.BaseDomain, proxyService)
+
+	// Restart active deployments on startup
+	log.Println("Restarting active deployments...")
+	if err := deploymentService.RestartActiveDeployments(db); err != nil {
+		log.Printf("Warning: Failed to restart some deployments: %v", err)
+	} else {
+		log.Println("Active deployments restarted successfully")
+	}
 
 	// Initialize handlers
 	handler := handlers.NewTemplHandler(db, githubService, deploymentService, cfg)
 
-	// Setup router
+	// Setup main router for dashboard/management
 	r := chi.NewRouter()
 
-	// Middleware
+	// Setup subdomain router for deployed apps
+	subdomainRouter := chi.NewRouter()
+
+	// Middleware for main router
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
 
-	// CORS
+	// CORS for main router
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -66,7 +79,7 @@ func main() {
 		MaxAge:           300,
 	}))
 
-	// Routes
+	// Main app routes (dashboard/management)
 	r.Get("/", handler.Home)
 	r.Get("/auth/github", handler.GitHubAuth)
 	r.Get("/auth/github/callback", handler.GitHubCallback)
@@ -83,10 +96,33 @@ func main() {
 	filesDir := http.Dir(workDir + "/web/static/")
 	r.Handle("/static/*", http.StripPrefix("/static", http.FileServer(filesDir)))
 
+	// Subdomain routes (deployed apps)
+	subdomainRouter.Handle("/*", proxyService)
+
+	// Create a custom handler that routes based on subdomain
+	mainHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		host := req.Host
+
+		// Remove port from host
+		if colonIndex := strings.LastIndex(host, ":"); colonIndex != -1 {
+			host = host[:colonIndex]
+		}
+
+		// Check if this is a subdomain request
+		parts := strings.Split(host, ".")
+		if len(parts) > 1 && host != "localhost" && parts[0] != "" {
+			// This is a subdomain request, use the proxy service
+			subdomainRouter.ServeHTTP(w, req)
+		} else {
+			// This is the main app request
+			r.ServeHTTP(w, req)
+		}
+	})
+
 	// Start server
 	srv := &http.Server{
 		Addr:    ":" + cfg.Port,
-		Handler: r,
+		Handler: mainHandler,
 	}
 
 	// Graceful shutdown

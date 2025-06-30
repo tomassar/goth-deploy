@@ -3,7 +3,9 @@ package services
 import (
 	"bufio"
 	"context"
+	"database/sql"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -113,11 +115,17 @@ func (s *DeploymentService) startService(ctx context.Context, subdomain, project
 	// Stop existing service if running
 	s.StopService(subdomain)
 
+	// Find available port
+	port, err := s.findAvailablePort()
+	if err != nil {
+		return fmt.Errorf("failed to find available port: %w", err)
+	}
+
 	// Start new service
 	cmd := exec.CommandContext(ctx, "./app")
 	cmd.Dir = projectPath
 	cmd.Env = append(os.Environ(),
-		"PORT=0", // Let the system assign a port
+		fmt.Sprintf("PORT=%d", port),
 		fmt.Sprintf("SUBDOMAIN=%s", subdomain),
 	)
 
@@ -135,10 +143,44 @@ func (s *DeploymentService) startService(ctx context.Context, subdomain, project
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
 
-	return cmd.Start()
+	// Start the process
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start service: %w", err)
+	}
+
+	// Track the port for this subdomain
+	s.portMux.Lock()
+	s.portTracker[subdomain] = port
+	s.portMux.Unlock()
+
+	// Add route to proxy service
+	targetURL := fmt.Sprintf("http://localhost:%d", port)
+	s.proxyService.AddRoute(subdomain, targetURL)
+
+	return nil
+}
+
+// findAvailablePort finds an available port starting from 3000
+func (s *DeploymentService) findAvailablePort() (int, error) {
+	for port := 3000; port < 4000; port++ {
+		listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+		if err == nil {
+			listener.Close()
+			return port, nil
+		}
+	}
+	return 0, fmt.Errorf("no available ports found in range 3000-4000")
 }
 
 func (s *DeploymentService) StopService(subdomain string) error {
+	// Remove from proxy service
+	s.proxyService.RemoveRoute(subdomain)
+
+	// Remove from port tracker
+	s.portMux.Lock()
+	delete(s.portTracker, subdomain)
+	s.portMux.Unlock()
+
 	// This is a simplified approach - in production you'd want proper process management
 	cmd := exec.Command("pkill", "-f", subdomain)
 	cmd.Run() // Ignore errors as the process might not be running
@@ -193,4 +235,58 @@ func (s *DeploymentService) GenerateSubdomain(projectName string) string {
 
 func (s *DeploymentService) GetProjectURL(subdomain string) string {
 	return fmt.Sprintf("http://%s.%s", subdomain, s.baseDomain)
+}
+
+// RestartActiveDeployments restarts all active deployments on server startup
+func (s *DeploymentService) RestartActiveDeployments(db *sql.DB) error {
+	// Query for active projects
+	rows, err := db.Query(`
+		SELECT subdomain, repository, branch FROM projects WHERE status = ?
+	`, "active")
+	if err != nil {
+		return fmt.Errorf("failed to query active projects: %w", err)
+	}
+	defer rows.Close()
+
+	var restarted, failed int
+
+	for rows.Next() {
+		var subdomain, repository, branch string
+		if err := rows.Scan(&subdomain, &repository, &branch); err != nil {
+			failed++
+			continue
+		}
+
+		// Check if deployment directory exists
+		projectPath := filepath.Join(s.deploymentPath, subdomain)
+		if _, err := os.Stat(projectPath); os.IsNotExist(err) {
+			failed++
+			continue
+		}
+
+		// Check if built app exists
+		appPath := filepath.Join(projectPath, "app")
+		if _, err := os.Stat(appPath); os.IsNotExist(err) {
+			failed++
+			continue
+		}
+
+		// Start the service directly without rebuilding
+		if err := s.startService(context.Background(), subdomain, projectPath); err != nil {
+			failed++
+			continue
+		}
+
+		restarted++
+	}
+
+	if failed > 0 {
+		return fmt.Errorf("restarted %d deployments, failed to restart %d deployments", restarted, failed)
+	}
+
+	if restarted > 0 {
+		fmt.Printf("Successfully restarted %d active deployments\n", restarted)
+	}
+
+	return nil
 }
