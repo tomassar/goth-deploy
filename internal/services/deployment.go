@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,8 +21,10 @@ type DeploymentService struct {
 	deploymentPath string
 	baseDomain     string
 	proxyService   *ProxyService
-	portTracker    map[string]int // subdomain -> port
+	portTracker    map[string]int         // subdomain -> port
+	processTracker map[string]*os.Process // subdomain -> process
 	portMux        sync.RWMutex
+	processMux     sync.RWMutex
 }
 
 func NewDeploymentService(deploymentPath, baseDomain string, proxyService *ProxyService) *DeploymentService {
@@ -30,6 +33,7 @@ func NewDeploymentService(deploymentPath, baseDomain string, proxyService *Proxy
 		baseDomain:     baseDomain,
 		proxyService:   proxyService,
 		portTracker:    make(map[string]int),
+		processTracker: make(map[string]*os.Process),
 	}
 }
 
@@ -148,15 +152,20 @@ func (s *DeploymentService) startService(ctx context.Context, subdomain, project
 		return fmt.Errorf("failed to start service: %w", err)
 	}
 
-	// Track the port for this subdomain
+	// Track the port and process for this subdomain
 	s.portMux.Lock()
 	s.portTracker[subdomain] = port
 	s.portMux.Unlock()
+
+	s.processMux.Lock()
+	s.processTracker[subdomain] = cmd.Process
+	s.processMux.Unlock()
 
 	// Add route to proxy service
 	targetURL := fmt.Sprintf("http://localhost:%d", port)
 	s.proxyService.AddRoute(subdomain, targetURL)
 
+	fmt.Printf("Started service for %s on port %d (PID: %d)\n", subdomain, port, cmd.Process.Pid)
 	return nil
 }
 
@@ -172,18 +181,130 @@ func (s *DeploymentService) findAvailablePort() (int, error) {
 	return 0, fmt.Errorf("no available ports found in range 3000-4000")
 }
 
+// StopService stops a running deployment service
 func (s *DeploymentService) StopService(subdomain string) error {
+	fmt.Printf("Stopping service for %s...\n", subdomain)
+
 	// Remove from proxy service
 	s.proxyService.RemoveRoute(subdomain)
 
+	// Get and remove process
+	s.processMux.Lock()
+	process, exists := s.processTracker[subdomain]
+	if exists {
+		delete(s.processTracker, subdomain)
+	}
+	s.processMux.Unlock()
+
 	// Remove from port tracker
 	s.portMux.Lock()
+	port, portExists := s.portTracker[subdomain]
 	delete(s.portTracker, subdomain)
 	s.portMux.Unlock()
 
-	// This is a simplified approach - in production you'd want proper process management
+	// Kill the specific process if we have it
+	if exists && process != nil {
+		fmt.Printf("Killing process PID %d for %s\n", process.Pid, subdomain)
+		if err := process.Kill(); err != nil {
+			fmt.Printf("Failed to kill process %d: %v\n", process.Pid, err)
+		}
+	}
+
+	// Fallback: kill by port if we know it
+	if portExists {
+		s.killProcessByPort(port)
+	}
+
+	// Additional fallback: kill by subdomain name pattern
 	cmd := exec.Command("pkill", "-f", subdomain)
-	cmd.Run() // Ignore errors as the process might not be running
+	if err := cmd.Run(); err != nil {
+		// Ignore errors as the process might not be running
+		fmt.Printf("pkill for %s: %v (this is normal if process wasn't running)\n", subdomain, err)
+	}
+
+	fmt.Printf("Service stopped for %s\n", subdomain)
+	return nil
+}
+
+// DeleteDeployment completely removes a deployment including files
+func (s *DeploymentService) DeleteDeployment(subdomain string) error {
+	fmt.Printf("Deleting deployment for %s...\n", subdomain)
+
+	// First stop the service
+	if err := s.StopService(subdomain); err != nil {
+		fmt.Printf("Warning: Failed to stop service for %s: %v\n", subdomain, err)
+	}
+
+	// Remove deployment directory
+	projectPath := filepath.Join(s.deploymentPath, subdomain)
+	if _, err := os.Stat(projectPath); err == nil {
+		fmt.Printf("Removing deployment directory: %s\n", projectPath)
+		if err := os.RemoveAll(projectPath); err != nil {
+			return fmt.Errorf("failed to remove deployment directory: %w", err)
+		}
+	}
+
+	// Remove log file
+	logFile := filepath.Join(s.deploymentPath, "logs", subdomain+".log")
+	if _, err := os.Stat(logFile); err == nil {
+		fmt.Printf("Removing log file: %s\n", logFile)
+		if err := os.Remove(logFile); err != nil {
+			fmt.Printf("Warning: Failed to remove log file: %v\n", err)
+		}
+	}
+
+	fmt.Printf("Deployment deleted for %s\n", subdomain)
+	return nil
+}
+
+// killProcessByPort kills a process running on a specific port
+func (s *DeploymentService) killProcessByPort(port int) {
+	cmd := exec.Command("lsof", "-ti", fmt.Sprintf(":%d", port))
+	output, err := cmd.Output()
+	if err != nil {
+		return // No process found on this port
+	}
+
+	pidStr := strings.TrimSpace(string(output))
+	if pidStr == "" {
+		return
+	}
+
+	pid, err := strconv.Atoi(pidStr)
+	if err != nil {
+		return
+	}
+
+	fmt.Printf("Killing process PID %d on port %d\n", pid, port)
+	killCmd := exec.Command("kill", "-9", strconv.Itoa(pid))
+	killCmd.Run() // Ignore errors
+}
+
+// GetActiveDeployments returns a list of currently active deployments
+func (s *DeploymentService) GetActiveDeployments() []string {
+	s.portMux.RLock()
+	defer s.portMux.RUnlock()
+
+	var active []string
+	for subdomain := range s.portTracker {
+		active = append(active, subdomain)
+	}
+	return active
+}
+
+// StopAllDeployments stops all running deployments
+func (s *DeploymentService) StopAllDeployments() error {
+	active := s.GetActiveDeployments()
+
+	fmt.Printf("Stopping %d active deployments...\n", len(active))
+
+	for _, subdomain := range active {
+		if err := s.StopService(subdomain); err != nil {
+			fmt.Printf("Failed to stop %s: %v\n", subdomain, err)
+		}
+	}
+
+	fmt.Printf("All deployments stopped\n")
 	return nil
 }
 

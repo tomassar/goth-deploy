@@ -88,8 +88,11 @@ func main() {
 	r.Post("/projects", handler.CreateProject)
 	r.Get("/projects/{id}", handler.GetProject)
 	r.Post("/projects/{id}/deploy", handler.DeployProject)
-	r.Get("/projects/{id}/logs", handler.GetDeploymentLogs)
+	r.Post("/projects/{id}/stop", handler.StopProject)
 	r.Delete("/projects/{id}", handler.DeleteProject)
+	r.Get("/projects/{id}/logs", handler.GetDeploymentLogs)
+	r.Post("/deployments/stop-all", handler.StopAllProjects)
+	r.Get("/deployments/active", handler.GetActiveDeployments)
 
 	// Static files
 	workDir, _ := os.Getwd()

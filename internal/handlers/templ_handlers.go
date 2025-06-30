@@ -438,7 +438,7 @@ func (h *TemplHandler) GetDeploymentLogs(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-func (h *TemplHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
+func (h *TemplHandler) StopProject(w http.ResponseWriter, r *http.Request) {
 	user, err := h.getCurrentUser(r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -453,12 +453,55 @@ func (h *TemplHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Stop the service
-	h.deploymentService.StopService(project.Subdomain)
+	err = h.deploymentService.StopService(project.Subdomain)
+	if err != nil {
+		http.Error(w, "Failed to stop deployment", http.StatusInternalServerError)
+		return
+	}
+
+	// Update project status to idle
+	_, err = h.db.Exec(`
+		UPDATE projects SET status = ?, updated_at = ? WHERE id = ?
+	`, models.ProjectStatusIdle, time.Now(), project.ID)
+	if err != nil {
+		http.Error(w, "Failed to update project status", http.StatusInternalServerError)
+		return
+	}
+
+	// Return HTMX response
+	w.Header().Set("HX-Trigger", "projectStopped")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Deployment stopped successfully",
+	})
+}
+
+func (h *TemplHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getCurrentUser(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	projectID := chi.URLParam(r, "id")
+	project, err := h.getProject(projectID, user.ID)
+	if err != nil {
+		http.Error(w, "Project not found", http.StatusNotFound)
+		return
+	}
+
+	// Delete the deployment (this stops the service and cleans up files)
+	err = h.deploymentService.DeleteDeployment(project.Subdomain)
+	if err != nil {
+		http.Error(w, "Failed to delete deployment", http.StatusInternalServerError)
+		return
+	}
 
 	// Delete from database
 	_, err = h.db.Exec(`DELETE FROM projects WHERE id = ? AND user_id = ?`, project.ID, user.ID)
 	if err != nil {
-		http.Error(w, "Failed to delete project", http.StatusInternalServerError)
+		http.Error(w, "Failed to delete project from database", http.StatusInternalServerError)
 		return
 	}
 
@@ -468,5 +511,72 @@ func (h *TemplHandler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"success": true,
 		"message": "Project deleted successfully",
+	})
+}
+
+func (h *TemplHandler) StopAllProjects(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getCurrentUser(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Stop all deployments
+	err = h.deploymentService.StopAllDeployments()
+	if err != nil {
+		http.Error(w, "Failed to stop all deployments", http.StatusInternalServerError)
+		return
+	}
+
+	// Update all user's projects to idle status
+	_, err = h.db.Exec(`
+		UPDATE projects SET status = ?, updated_at = ? WHERE user_id = ? AND status = ?
+	`, models.ProjectStatusIdle, time.Now(), user.ID, models.ProjectStatusActive)
+	if err != nil {
+		http.Error(w, "Failed to update project statuses", http.StatusInternalServerError)
+		return
+	}
+
+	// Return HTMX response
+	w.Header().Set("HX-Trigger", "allProjectsStopped")
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "All deployments stopped successfully",
+	})
+}
+
+func (h *TemplHandler) GetActiveDeployments(w http.ResponseWriter, r *http.Request) {
+	user, err := h.getCurrentUser(r)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Get active deployments from service
+	activeDeployments := h.deploymentService.GetActiveDeployments()
+
+	// Get user's projects
+	projects, err := h.getUserProjects(user.ID)
+	if err != nil {
+		http.Error(w, "Failed to get projects", http.StatusInternalServerError)
+		return
+	}
+
+	// Filter to only user's active projects
+	var userActiveDeployments []string
+	for _, project := range projects {
+		for _, active := range activeDeployments {
+			if project.Subdomain == active && project.Status == models.ProjectStatusActive {
+				userActiveDeployments = append(userActiveDeployments, active)
+				break
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"active_deployments": userActiveDeployments,
+		"count":              len(userActiveDeployments),
 	})
 }
