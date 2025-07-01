@@ -36,4 +36,52 @@
 .status-failed {
     background-color: #fee2e2;
     color: #dc2626;
+}
+
+/* Enhanced modal and repository list styles */
+#project-modal .glass {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Repository item hover effects */
+form[hx-post="/projects"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 212, 255, 0.15);
+}
+
+/* Improved scrollbar for repository list */
+.max-h-96::-webkit-scrollbar {
+    width: 8px;
+}
+
+.max-h-96::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.max-h-96::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.max-h-96::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 212, 255, 0.5);
+}
+
+/* Loading state for repository items */
+form[hx-post="/projects"][aria-busy="true"] {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Better text contrast */
+.text-gray-300 {
+    color: rgba(209, 213, 219, 0.9);
+}
+
+.text-gray-400 {
+    color: rgba(156, 163, 175, 0.8);
 } 
