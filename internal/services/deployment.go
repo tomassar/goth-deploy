@@ -19,23 +19,25 @@ import (
 )
 
 type DeploymentService struct {
-	deploymentPath string
-	baseDomain     string
-	proxyService   *ProxyService
-	portTracker    map[string]int         // subdomain -> port
-	processTracker map[string]*os.Process // subdomain -> process
-	portMux        sync.RWMutex
-	processMux     sync.RWMutex
-	secretsService *SecretsService
+	deploymentPath   string
+	baseDomain       string
+	proxyService     *ProxyService
+	isolationService *IsolationService
+	portTracker      map[string]int         // subdomain -> port
+	processTracker   map[string]*os.Process // subdomain -> process
+	portMux          sync.RWMutex
+	processMux       sync.RWMutex
+	secretsService   *SecretsService
 }
 
-func NewDeploymentService(deploymentPath, baseDomain string, proxyService *ProxyService) *DeploymentService {
+func NewDeploymentService(deploymentPath, baseDomain string, proxyService *ProxyService, isolationService *IsolationService) *DeploymentService {
 	return &DeploymentService{
-		deploymentPath: deploymentPath,
-		baseDomain:     baseDomain,
-		proxyService:   proxyService,
-		portTracker:    make(map[string]int),
-		processTracker: make(map[string]*os.Process),
+		deploymentPath:   deploymentPath,
+		baseDomain:       baseDomain,
+		proxyService:     proxyService,
+		isolationService: isolationService,
+		portTracker:      make(map[string]int),
+		processTracker:   make(map[string]*os.Process),
 	}
 }
 
@@ -177,47 +179,62 @@ func (s *DeploymentService) startService(ctx context.Context, projectID int, sub
 	}
 
 	// Get project secrets for environment variables
-	var env []string
+	var secrets map[string]string
 	if s.secretsService != nil {
-		secrets, err := s.secretsService.GetProjectSecretsForDeployment(projectID)
+		var err error
+		secrets, err = s.secretsService.GetProjectSecretsForDeployment(projectID)
 		if err != nil {
 			fmt.Printf("Warning: Could not load secrets for project %d: %v\n", projectID, err)
-		} else {
-			// Add secrets as environment variables
-			for key, value := range secrets {
-				env = append(env, fmt.Sprintf("%s=%s", key, value))
-			}
-			if len(secrets) > 0 {
-				fmt.Printf("Loaded %d secrets for deployment\n", len(secrets))
-			}
+			secrets = make(map[string]string)
+		} else if len(secrets) > 0 {
+			fmt.Printf("Loaded %d secrets for deployment\n", len(secrets))
+		}
+	} else {
+		secrets = make(map[string]string)
+	}
+
+	// Create isolated process using isolation service
+	isolationConfig := &IsolationConfig{
+		ProjectID:   projectID,
+		Subdomain:   subdomain,
+		ProjectPath: projectPath,
+		Port:        port,
+		Secrets:     secrets,
+	}
+
+	cmd, err := s.isolationService.CreateIsolatedProcess(isolationConfig)
+	if err != nil {
+		return fmt.Errorf("failed to create isolated process: %w", err)
+	}
+
+	// Start the isolated process
+	err = cmd.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start isolated process: %w", err)
+	}
+
+	// Apply resource limits using cgroups
+	if s.isolationService != nil {
+		if err := s.isolationService.SetResourceLimits(cmd.Process.Pid, subdomain); err != nil {
+			fmt.Printf("Warning: failed to set resource limits: %v\n", err)
 		}
 	}
 
-	// Add standard environment variables
-	env = append(env, fmt.Sprintf("PORT=%d", port))
-
-	// Create command with environment variables
-	cmd := exec.CommandContext(ctx, "./app")
-	cmd.Dir = projectPath
-	cmd.Env = append(os.Environ(), env...)
-
-	// Start the process
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start service: %w", err)
-	}
-
-	// Store the process for later management
+	// Track the process and port
 	s.portMux.Lock()
 	s.portTracker[subdomain] = port
+	s.portMux.Unlock()
+
 	s.processMux.Lock()
 	s.processTracker[subdomain] = cmd.Process
-	s.portMux.Unlock()
 	s.processMux.Unlock()
 
-	// Register with proxy service
-	s.proxyService.AddRoute(subdomain, fmt.Sprintf("http://localhost:%d", port))
+	// Update proxy configuration
+	if s.proxyService != nil {
+		s.proxyService.AddRoute(subdomain, fmt.Sprintf("http://localhost:%d", port))
+	}
 
-	fmt.Printf("Service %s started on port %d\n", subdomain, port)
+	fmt.Printf("Isolated service started for %s on port %d (PID: %d)\n", subdomain, port, cmd.Process.Pid)
 	return nil
 }
 
@@ -238,7 +255,9 @@ func (s *DeploymentService) StopService(subdomain string) error {
 	fmt.Printf("Stopping service for %s...\n", subdomain)
 
 	// Remove from proxy service
-	s.proxyService.RemoveRoute(subdomain)
+	if s.proxyService != nil {
+		s.proxyService.RemoveRoute(subdomain)
+	}
 
 	// Get and remove process
 	s.processMux.Lock()
@@ -274,6 +293,13 @@ func (s *DeploymentService) StopService(subdomain string) error {
 		fmt.Printf("pkill for %s: %v (this is normal if process wasn't running)\n", subdomain, err)
 	}
 
+	// Clean up isolation resources
+	if s.isolationService != nil {
+		if err := s.isolationService.CleanupCgroup(subdomain); err != nil {
+			fmt.Printf("Warning: failed to cleanup cgroup for %s: %v\n", subdomain, err)
+		}
+	}
+
 	fmt.Printf("Service stopped for %s\n", subdomain)
 	return nil
 }
@@ -302,6 +328,13 @@ func (s *DeploymentService) DeleteDeployment(subdomain string) error {
 		fmt.Printf("Removing log file: %s\n", logFile)
 		if err := os.Remove(logFile); err != nil {
 			fmt.Printf("Warning: Failed to remove log file: %v\n", err)
+		}
+	}
+
+	// Clean up isolation resources (user, home directory, chroot)
+	if s.isolationService != nil {
+		if err := s.isolationService.CleanupUser(subdomain); err != nil {
+			fmt.Printf("Warning: failed to cleanup isolation resources for %s: %v\n", subdomain, err)
 		}
 	}
 

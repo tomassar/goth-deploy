@@ -45,7 +45,14 @@ func main() {
 	// Initialize services
 	githubService := services.NewGitHubService(cfg.GitHubClientID, cfg.GitHubClientSecret)
 	proxyService := services.NewProxyService()
-	deploymentService := services.NewDeploymentService(cfg.DeploymentPath, cfg.BaseDomain, proxyService)
+	isolationService := services.NewIsolationService(
+		cfg.IsolationConfig.BaseUID,
+		cfg.IsolationConfig.BaseGID,
+		cfg.IsolationConfig.UsersDir,
+		cfg.IsolationConfig.ChrootBase,
+		cfg.IsolationConfig.EnableChroot,
+	)
+	deploymentService := services.NewDeploymentService(cfg.DeploymentPath, cfg.BaseDomain, proxyService, isolationService)
 	secretsService := services.NewSecretsService(db, cfg.EncryptionKey)
 
 	// Connect secrets service to deployment service

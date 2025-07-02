@@ -13,6 +13,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.22
 	golang.org/x/oauth2 v0.18.0
+	golang.org/x/sys v0.33.0
 )
 
 require (
