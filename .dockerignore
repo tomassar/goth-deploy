@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+
+# Docker files
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Documentation
+*.md
+SETUP.md
+README.md
+SECURITY-ANALYSIS.md
+ISOLATION.md
+ISOLATION-SUMMARY.md
+SECRETS.md
+
+# Build artifacts
+bin/
+deployer
+web/templates/*_templ.go
+
+# Local development
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+deployments/logs/
+
+# Temporary files
+*.tmp
+*.temp 
