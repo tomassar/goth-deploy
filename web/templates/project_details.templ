@@ -1,0 +1,462 @@
+package templates
+
+import (
+	"goth-deploy/internal/models"
+	"fmt"
+	"time"
+)
+
+type ProjectDetailsData struct {
+	Project     models.Project
+	Deployments []models.Deployment
+	IsRunning   bool
+	BaseDomain  string
+}
+
+templ ProjectDetails(user *models.User, data ProjectDetailsData) {
+@Base("Project Details", user) {
+    <div class="min-h-screen bg-gray-50">
+        <!-- Header -->
+        <div class="bg-white shadow">
+            <div class="px-4 sm:px-6 lg:max-w-7xl lg:mx-auto lg:px-8">
+                <div class="py-6 md:flex md:items-center md:justify-between">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center">
+                            <a href="/dashboard" 
+                               class="text-gray-400 hover:text-gray-600 transition-colors mr-4">
+                                <i class="fas fa-arrow-left text-lg"></i>
+                            </a>
+                            <div>
+                                <div class="flex items-center">
+                                    <h1 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+                                        { data.Project.Name }
+                                    </h1>
+                                    <div class="ml-3">
+                                        @ProjectStatusBadge(data.Project.Status)
+                                    </div>
+                                </div>
+                                <dl class="mt-2 flex flex-col sm:flex-row sm:flex-wrap">
+                                    <dt class="sr-only">Repository</dt>
+                                    <dd class="flex items-center text-sm text-gray-500">
+                                        <i class="fas fa-code-branch mr-2"></i>
+                                        <span class="mr-2">{ data.Project.Branch }</span>
+                                        <span class="text-gray-300 mr-2">•</span>
+                                        <a href={ templ.URL(data.Project.RepoURL) } 
+                                           target="_blank" 
+                                           class="text-purple-600 hover:text-purple-500 transition-colors">
+                                            { data.Project.RepoURL }
+                                            <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                                        </a>
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex space-x-3 md:ml-4 md:mt-0">
+                        if data.Project.Status == "active" {
+                            <a href={ templ.URL(fmt.Sprintf("http://%s.%s", data.Project.Subdomain, data.BaseDomain)) } 
+                               target="_blank"
+                               class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 transition-colors">
+                                <i class="fas fa-external-link-alt mr-2"></i>
+                                View Live App
+                            </a>
+                        }
+                        <button type="button" 
+                                hx-post={ fmt.Sprintf("/projects/%d/deploy", data.Project.ID) }
+                                hx-trigger="click"
+                                hx-indicator=".deploy-spinner"
+                                class="inline-flex items-center rounded-md bg-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-purple-500 transition-colors">
+                            <i class="fas fa-rocket mr-2"></i>
+                            Deploy Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Project Information Section -->
+            <div class="mb-8">
+                @ProjectInformationSection(data.Project, data.IsRunning, data.BaseDomain)
+            </div>
+
+            <!-- Deployment History Section -->
+            <div>
+                @DeploymentHistorySection(data.Deployments)
+            </div>
+        </div>
+    </div>
+}
+}
+
+templ ProjectStatusBadge(status string) {
+    if status == "active" {
+        <span class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+            <span class="mr-1 h-1.5 w-1.5 rounded-full bg-green-400"></span>
+            Active
+        </span>
+    } else if status == "building" {
+        <span class="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
+            <span class="mr-1 h-1.5 w-1.5 rounded-full bg-yellow-400"></span>
+            Building
+        </span>
+    } else if status == "failed" {
+        <span class="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+            <span class="mr-1 h-1.5 w-1.5 rounded-full bg-red-400"></span>
+            Failed
+        </span>
+    } else {
+        <span class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800">
+            <span class="mr-1 h-1.5 w-1.5 rounded-full bg-gray-400"></span>
+            Inactive
+        </span>
+    }
+}
+
+templ ProjectInformationSection(project models.Project, isRunning bool, baseDomain string) {
+    <div class="bg-white shadow rounded-lg border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h2 class="text-xl font-semibold text-gray-900">Project Information</h2>
+        </div>
+        <div class="px-6 py-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Application URL -->
+                <div class="space-y-1">
+                    <dt class="text-sm font-medium text-gray-500 flex items-center">
+                        <i class="fas fa-globe mr-2 text-gray-400"></i>
+                        Application URL
+                    </dt>
+                    <dd class="text-sm">
+                        <a href={ templ.URL(fmt.Sprintf("http://%s.%s", project.Subdomain, baseDomain)) } 
+                           target="_blank" 
+                           class="text-purple-600 hover:text-purple-500 transition-colors font-medium">
+                            { fmt.Sprintf("%s.%s", project.Subdomain, baseDomain) }
+                            <i class="fas fa-external-link-alt ml-1 text-xs"></i>
+                        </a>
+                    </dd>
+                </div>
+
+                <!-- Runtime Status -->
+                <div class="space-y-1">
+                    <dt class="text-sm font-medium text-gray-500 flex items-center">
+                        <i class="fas fa-server mr-2 text-gray-400"></i>
+                        Runtime Status
+                    </dt>
+                    <dd class="text-sm">
+                        @RuntimeStatusIndicator(isRunning)
+                    </dd>
+                </div>
+
+                <!-- Port -->
+                <div class="space-y-1">
+                    <dt class="text-sm font-medium text-gray-500 flex items-center">
+                        <i class="fas fa-network-wired mr-2 text-gray-400"></i>
+                        Port
+                    </dt>
+                    <dd class="text-sm text-gray-900 font-mono">{ fmt.Sprintf("%d", project.Port) }</dd>
+                </div>
+
+                <!-- Build Command -->
+                <div class="space-y-1">
+                    <dt class="text-sm font-medium text-gray-500 flex items-center">
+                        <i class="fas fa-hammer mr-2 text-gray-400"></i>
+                        Build Command
+                    </dt>
+                    <dd class="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
+                        { project.BuildCommand }
+                    </dd>
+                </div>
+
+                <!-- Start Command -->
+                <div class="space-y-1">
+                    <dt class="text-sm font-medium text-gray-500 flex items-center">
+                        <i class="fas fa-play mr-2 text-gray-400"></i>
+                        Start Command
+                    </dt>
+                    <dd class="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
+                        { project.StartCommand }
+                    </dd>
+                </div>
+
+                <!-- Last Deploy -->
+                if project.LastDeploy != nil {
+                    <div class="space-y-1">
+                        <dt class="text-sm font-medium text-gray-500 flex items-center">
+                            <i class="fas fa-clock mr-2 text-gray-400"></i>
+                            Last Deployed
+                        </dt>
+                        <dd class="text-sm text-gray-900">
+                            { project.LastDeploy.Format("Jan 2, 2006 at 3:04pm") }
+                        </dd>
+                    </div>
+                } else {
+                    <div class="space-y-1">
+                        <dt class="text-sm font-medium text-gray-500 flex items-center">
+                            <i class="fas fa-clock mr-2 text-gray-400"></i>
+                            Last Deployed
+                        </dt>
+                        <dd class="text-sm text-gray-500 italic">Never deployed</dd>
+                    </div>
+                }
+
+                <!-- Created Date -->
+                <div class="space-y-1">
+                    <dt class="text-sm font-medium text-gray-500 flex items-center">
+                        <i class="fas fa-calendar-plus mr-2 text-gray-400"></i>
+                        Created
+                    </dt>
+                    <dd class="text-sm text-gray-900">
+                        { project.CreatedAt.Format("Jan 2, 2006 at 3:04pm") }
+                    </dd>
+                </div>
+
+                <!-- Branch Info -->
+                <div class="space-y-1">
+                    <dt class="text-sm font-medium text-gray-500 flex items-center">
+                        <i class="fas fa-code-branch mr-2 text-gray-400"></i>
+                        Branch
+                    </dt>
+                    <dd class="text-sm text-gray-900 font-mono">{ project.Branch }</dd>
+                </div>
+
+                <!-- Subdomain -->
+                <div class="space-y-1">
+                    <dt class="text-sm font-medium text-gray-500 flex items-center">
+                        <i class="fas fa-tag mr-2 text-gray-400"></i>
+                        Subdomain
+                    </dt>
+                    <dd class="text-sm text-gray-900 font-mono">{ project.Subdomain }</dd>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+templ RuntimeStatusIndicator(isRunning bool) {
+    if isRunning {
+        <span class="inline-flex items-center text-sm text-green-600 font-medium">
+            <span class="mr-2 h-2 w-2 rounded-full bg-green-400 animate-pulse"></span>
+            Process Running
+        </span>
+    } else {
+        <span class="inline-flex items-center text-sm text-gray-600 font-medium">
+            <span class="mr-2 h-2 w-2 rounded-full bg-gray-400"></span>
+            Process Stopped
+        </span>
+    }
+}
+
+templ DeploymentHistorySection(deployments []models.Deployment) {
+    <div class="bg-white shadow rounded-lg border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-gray-900">Deployment History</h2>
+                <span class="text-sm text-gray-500">
+                    if len(deployments) == 1 {
+                        { fmt.Sprintf("%d deployment", len(deployments)) }
+                    } else {
+                        { fmt.Sprintf("%d deployments", len(deployments)) }
+                    }
+                </span>
+            </div>
+        </div>
+        <div class="px-6 py-6">
+            if len(deployments) == 0 {
+                @EmptyDeploymentsState()
+            } else {
+                <div class="space-y-4">
+                    for _, deployment := range deployments {
+                        @EnhancedDeploymentCard(deployment)
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+templ EmptyDeploymentsState() {
+    <div class="text-center py-12">
+        <div class="mx-auto h-16 w-16 text-gray-300 mb-4">
+            <i class="fas fa-rocket text-4xl"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No deployments yet</h3>
+        <p class="text-sm text-gray-500 mb-6">
+            Click the "Deploy Now" button above to create your first deployment.
+        </p>
+        <div class="text-xs text-gray-400">
+            <i class="fas fa-info-circle mr-1"></i>
+            Deployments will appear here once you start deploying your project.
+        </div>
+    </div>
+}
+
+templ EnhancedDeploymentCard(deployment models.Deployment) {
+    <div class="border border-gray-200 rounded-lg p-6 hover:border-gray-300 hover:shadow-sm transition-all duration-200">
+        <div class="flex items-start justify-between">
+            <div class="flex items-start space-x-4">
+                <div class="flex-shrink-0 mt-1">
+                    @DeploymentStatusIcon(deployment.Status)
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center space-x-3 mb-2">
+                        <h4 class="text-base font-medium text-gray-900">
+                            Deployment #{ fmt.Sprintf("%d", deployment.ID) }
+                        </h4>
+                        @DeploymentStatusBadge(deployment.Status)
+                    </div>
+                    
+                    <div class="space-y-2">
+                        <!-- Timing Information -->
+                        <div class="flex items-center text-sm text-gray-600">
+                            <i class="fas fa-clock mr-2 text-gray-400"></i>
+                            <span class="mr-4">Started { deployment.StartedAt.Format("Jan 2, 2006 at 3:04pm") }</span>
+                            if deployment.FinishedAt != nil {
+                                <span class="text-gray-400 mr-4">•</span>
+                                <span class="text-green-600 font-medium">
+                                    Completed in { deployment.FinishedAt.Sub(deployment.StartedAt).Round(time.Second).String() }
+                                </span>
+                            } else if deployment.Status == "building" {
+                                <span class="text-gray-400 mr-4">•</span>
+                                <span class="text-yellow-600 font-medium animate-pulse">In progress...</span>
+                            }
+                        </div>
+
+                        <!-- Commit Information -->
+                        if deployment.CommitSHA != "" {
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i class="fas fa-code-commit mr-2 text-gray-400"></i>
+                                <span class="font-mono bg-gray-100 px-2 py-1 rounded text-xs">
+                                    { deployment.CommitSHA[:min(len(deployment.CommitSHA), 8)] }
+                                </span>
+                            </div>
+                        }
+
+                        <!-- Error Message (if failed) -->
+                        if deployment.Status == "failed" && deployment.ErrorMsg != "" {
+                            <div class="bg-red-50 border border-red-200 rounded-md p-3 mt-3">
+                                <div class="flex items-start">
+                                    <i class="fas fa-exclamation-triangle text-red-400 mr-2 mt-0.5 flex-shrink-0"></i>
+                                    <div class="text-sm text-red-700">
+                                        <p class="font-medium mb-1">Deployment failed:</p>
+                                        <p class="text-red-600">{ deployment.ErrorMsg }</p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex-shrink-0 ml-4">
+                <button type="button" 
+                        class="logs-toggle inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
+                        data-deployment-id={ fmt.Sprintf("%d", deployment.ID) }>
+                    <i class="fas fa-file-alt mr-2"></i>
+                    View Logs
+                </button>
+            </div>
+        </div>
+        
+        <!-- Logs Section (initially hidden) -->
+        <div id={ fmt.Sprintf("logs-%d", deployment.ID) } class="hidden mt-6 pt-6 border-t border-gray-200">
+            <div class="bg-gray-900 rounded-lg p-4 overflow-x-auto max-h-96 overflow-y-auto">
+                <div class="flex items-center justify-between mb-3">
+                    <h5 class="text-sm font-medium text-gray-300">Build Logs</h5>
+                    <span class="text-xs text-gray-500">Deployment #{ fmt.Sprintf("%d", deployment.ID) }</span>
+                </div>
+                <pre class="text-sm text-green-400 font-mono whitespace-pre-wrap leading-relaxed" 
+                     id={ fmt.Sprintf("logs-content-%d", deployment.ID) }>Loading logs...</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Use event delegation for logs toggle buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.logs-toggle')) {
+                const btn = e.target.closest('.logs-toggle');
+                const deploymentId = btn.dataset.deploymentId;
+                
+                const logsDiv = document.getElementById(`logs-${deploymentId}`);
+                const logsContent = document.getElementById(`logs-content-${deploymentId}`);
+                const icon = btn.querySelector('i');
+                
+                if (logsDiv.classList.contains('hidden')) {
+                    logsDiv.classList.remove('hidden');
+                    icon.className = 'fas fa-eye-slash mr-2';
+                    btn.querySelector('span') && (btn.querySelector('span').textContent = 'Hide Logs');
+                    
+                    // Fetch logs if not already loaded
+                    if (logsContent.textContent.trim() === 'Loading logs...') {
+                        fetch(`/api/deployments/${deploymentId}/logs`)
+                            .then(response => response.text())
+                            .then(logs => {
+                                logsContent.textContent = logs || 'No logs available for this deployment.';
+                            })
+                            .catch(error => {
+                                logsContent.textContent = 'Error loading logs: ' + error.message;
+                                logsContent.className = logsContent.className.replace('text-green-400', 'text-red-400');
+                            });
+                    }
+                } else {
+                    logsDiv.classList.add('hidden');
+                    icon.className = 'fas fa-file-alt mr-2';
+                    btn.querySelector('span') && (btn.querySelector('span').textContent = 'View Logs');
+                }
+            }
+        });
+    </script>
+}
+
+templ DeploymentStatusIcon(status string) {
+    if status == "success" {
+        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+            <i class="fas fa-check text-green-600 text-lg"></i>
+        </div>
+    } else if status == "failed" {
+        <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+            <i class="fas fa-times text-red-600 text-lg"></i>
+        </div>
+    } else if status == "building" {
+        <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+            <i class="fas fa-spinner fa-spin text-yellow-600 text-lg"></i>
+        </div>
+    } else {
+        <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+            <i class="fas fa-clock text-gray-600 text-lg"></i>
+        </div>
+    }
+}
+
+templ DeploymentStatusBadge(status string) {
+    if status == "success" {
+        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-100 text-green-800">
+            <i class="fas fa-check mr-1"></i>
+            Success
+        </span>
+    } else if status == "failed" {
+        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-100 text-red-800">
+            <i class="fas fa-times mr-1"></i>
+            Failed
+        </span>
+    } else if status == "building" {
+        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800">
+            <i class="fas fa-spinner fa-spin mr-1"></i>
+            Building
+        </span>
+    } else {
+        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-800">
+            <i class="fas fa-clock mr-1"></i>
+            Pending
+        </span>
+    }
+}
+
+// Helper function to get minimum of two integers
+func min(a, b int) int {
+    if a < b {
+        return a
+    }
+    return b
+} 

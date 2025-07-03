@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"goth-deploy/internal/models"
 	"goth-deploy/web/templates"
 
 	"github.com/go-chi/chi/v5"
@@ -222,22 +223,142 @@ func (h *Handler) CreateProjectHandler(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ProjectDetailsHandler(w http.ResponseWriter, r *http.Request) {
 	user := h.getCurrentUser(r)
 	if user == nil {
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Redirect", "/")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	projectID := chi.URLParam(r, "id")
-	log.Printf("Project details request for project %s from user %s", projectID, user.Username)
+	projectIDStr := chi.URLParam(r, "id")
+	projectID, err := strconv.ParseInt(projectIDStr, 10, 64)
+	if err != nil {
+		log.Printf("Invalid project ID: %v", err)
+		if r.Header.Get("HX-Request") == "true" {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte("Invalid project ID"))
+			return
+		}
+		http.Error(w, "Invalid project ID", http.StatusBadRequest)
+		return
+	}
 
-	// TODO: Create project details template
-	w.Write([]byte(`
-		<div class="max-w-4xl mx-auto py-8">
-			<h2 class="text-2xl font-bold mb-6">Project Details</h2>
-			<p class="text-gray-600">Project ID: ` + projectID + `</p>
-			<p class="text-gray-600">Project details coming soon...</p>
-			<a href="/dashboard" class="text-purple-600 hover:text-purple-500">← Back to Dashboard</a>
-		</div>
-	`))
+	log.Printf("Project details request for project %d from user %s", projectID, user.Username)
+
+	// Get project details
+	var project models.Project
+	err = h.DB.QueryRow(`
+		SELECT id, user_id, name, github_repo_id, repo_url, branch, subdomain, 
+		       build_command, start_command, port, status, last_deploy, created_at, updated_at
+		FROM projects WHERE id = ? AND user_id = ?
+	`, projectID, user.ID).Scan(
+		&project.ID,
+		&project.UserID,
+		&project.Name,
+		&project.GitHubRepoID,
+		&project.RepoURL,
+		&project.Branch,
+		&project.Subdomain,
+		&project.BuildCommand,
+		&project.StartCommand,
+		&project.Port,
+		&project.Status,
+		&project.LastDeploy,
+		&project.CreatedAt,
+		&project.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Printf("Project %d not found for user %s", projectID, user.Username)
+			if r.Header.Get("HX-Request") == "true" {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte("Project not found"))
+				return
+			}
+			http.Error(w, "Project not found", http.StatusNotFound)
+		} else {
+			log.Printf("Error fetching project details: %v", err)
+			if r.Header.Get("HX-Request") == "true" {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("Internal server error"))
+				return
+			}
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Get deployments for this project
+	deployments, err := h.getProjectDeployments(projectID)
+	if err != nil {
+		log.Printf("Error fetching deployments: %v", err)
+		// Continue with empty deployments array instead of failing
+		deployments = []models.Deployment{}
+	}
+
+	// Check if project is currently running
+	isRunning := h.Deployment.IsProjectRunning(project.Subdomain)
+
+	// Create template data
+	data := templates.ProjectDetailsData{
+		Project:     project,
+		Deployments: deployments,
+		IsRunning:   isRunning,
+		BaseDomain:  h.Config.BaseDomain,
+	}
+
+	// Render the project details template
+	component := templates.ProjectDetails(user, data)
+	if err := component.Render(r.Context(), w); err != nil {
+		log.Printf("Error rendering project details template: %v", err)
+		if r.Header.Get("HX-Request") == "true" {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Error rendering page"))
+			return
+		}
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+}
+
+// getProjectDeployments fetches all deployments for a project
+func (h *Handler) getProjectDeployments(projectID int64) ([]models.Deployment, error) {
+	rows, err := h.DB.Query(`
+		SELECT id, project_id, commit_sha, status, build_log, error_msg, started_at, finished_at, created_at
+		FROM deployments 
+		WHERE project_id = ? 
+		ORDER BY created_at DESC 
+		LIMIT 20
+	`, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query deployments: %w", err)
+	}
+	defer rows.Close()
+
+	var deployments []models.Deployment
+	for rows.Next() {
+		var d models.Deployment
+		err := rows.Scan(
+			&d.ID,
+			&d.ProjectID,
+			&d.CommitSHA,
+			&d.Status,
+			&d.BuildLog,
+			&d.ErrorMsg,
+			&d.StartedAt,
+			&d.FinishedAt,
+			&d.CreatedAt,
+		)
+		if err != nil {
+			log.Printf("Error scanning deployment: %v", err)
+			continue
+		}
+		deployments = append(deployments, d)
+	}
+
+	return deployments, nil
 }
 
 // UpdateProjectHandler updates a project

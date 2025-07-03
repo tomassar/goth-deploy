@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -188,25 +189,60 @@ func (h *Handler) BuildLogsHandler(w http.ResponseWriter, r *http.Request) {
 	user := h.getCurrentUser(r)
 	if user == nil {
 		w.WriteHeader(http.StatusUnauthorized)
+		w.Write([]byte("Unauthorized"))
 		return
 	}
 
 	deploymentIDStr := chi.URLParam(r, "id")
 	deploymentID, err := strconv.ParseInt(deploymentIDStr, 10, 64)
 	if err != nil {
-		http.Error(w, "Invalid deployment ID", http.StatusBadRequest)
+		log.Printf("Invalid deployment ID: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Invalid deployment ID"))
 		return
 	}
 
-	// TODO: Verify user owns this deployment
+	// Verify user owns this deployment's project
+	var projectUserID int64
+	err = h.DB.QueryRow(`
+		SELECT p.user_id 
+		FROM deployments d 
+		JOIN projects p ON d.project_id = p.id 
+		WHERE d.id = ?
+	`, deploymentID).Scan(&projectUserID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("Deployment not found"))
+		} else {
+			log.Printf("Error checking deployment ownership: %v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte("Internal server error"))
+		}
+		return
+	}
 
+	if projectUserID != user.ID {
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte("Access denied"))
+		return
+	}
+
+	// Get deployment logs
 	logs, err := h.Deployment.GetDeploymentLogs(deploymentID)
 	if err != nil {
-		log.Printf("Error getting deployment logs: %v", err)
-		http.Error(w, "Failed to fetch deployment logs", http.StatusInternalServerError)
+		log.Printf("Error fetching deployment logs: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Error fetching logs"))
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(logs))
+	// Return logs as plain text
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	if logs == "" {
+		w.Write([]byte("No logs available for this deployment."))
+	} else {
+		w.Write([]byte(logs))
+	}
 }

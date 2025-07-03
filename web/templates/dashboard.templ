@@ -506,14 +506,11 @@ templ ProjectCard(project models.Project, baseDomain string) {
         </div>
 
         <div class="mt-6 flex space-x-3">
-            <button type="button" 
-                    hx-get={ fmt.Sprintf("/projects/%d", project.ID) }
-                    hx-target="#main-content"
-                    hx-push-url="true"
-                    class="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors">
+            <a href={ templ.URL(fmt.Sprintf("/projects/%d", project.ID)) } 
+               class="inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors">
                 <i class="fas fa-eye mr-1"></i>
                 Details
-            </button>
+            </a>
             <button type="button" 
                     hx-post={ fmt.Sprintf("/projects/%d/deploy", project.ID) }
                     hx-trigger="click"
