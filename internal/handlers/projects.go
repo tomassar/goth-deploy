@@ -259,6 +259,11 @@ func (h *Handler) UpdateProjectHandler(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteProjectHandler(w http.ResponseWriter, r *http.Request) {
 	user := h.getCurrentUser(r)
 	if user == nil {
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("HX-Redirect", "/")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
@@ -267,36 +272,84 @@ func (h *Handler) DeleteProjectHandler(w http.ResponseWriter, r *http.Request) {
 	projectID, err := strconv.ParseInt(projectIDStr, 10, 64)
 	if err != nil {
 		log.Printf("Invalid project ID: %v", err)
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"error":   "Invalid project ID",
+			})
+			return
+		}
 		http.Error(w, "Invalid project ID", http.StatusBadRequest)
 		return
 	}
 
 	// Verify user owns this project
 	var ownerID int64
-	err = h.DB.QueryRow("SELECT user_id FROM projects WHERE id = ?", projectID).Scan(&ownerID)
+	var projectName string
+	err = h.DB.QueryRow("SELECT user_id, name FROM projects WHERE id = ?", projectID).Scan(&ownerID, &projectName)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"success": false,
+					"error":   "Project not found",
+				})
+				return
+			}
 			http.Error(w, "Project not found", http.StatusNotFound)
 		} else {
 			log.Printf("Error checking project ownership: %v", err)
+			if r.Header.Get("HX-Request") == "true" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusInternalServerError)
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"success": false,
+					"error":   "Internal Server Error",
+				})
+				return
+			}
 			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		}
 		return
 	}
 
 	if ownerID != user.ID {
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"error":   "You don't have permission to delete this project",
+			})
+			return
+		}
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
 
+	log.Printf("Deleting project %d (%s) for user %s", projectID, projectName, user.Username)
+
 	// Delete the project using deployment service
 	if err := h.Deployment.DeleteProject(projectID); err != nil {
-		log.Printf("Error deleting project: %v", err)
+		log.Printf("Error deleting project %d: %v", projectID, err)
+		if r.Header.Get("HX-Request") == "true" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"success": false,
+				"error":   "Failed to delete project. Please try again.",
+			})
+			return
+		}
 		http.Error(w, "Failed to delete project", http.StatusInternalServerError)
 		return
 	}
 
-	log.Printf("Deleted project %d for user %s", projectID, user.Username)
+	log.Printf("Successfully deleted project %d (%s) for user %s", projectID, projectName, user.Username)
 
 	// Return success response
 	if r.Header.Get("HX-Request") == "true" {
@@ -304,11 +357,12 @@ func (h *Handler) DeleteProjectHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": true,
-			"message": "Project deleted successfully",
+			"message": fmt.Sprintf("Project '%s' deleted successfully", projectName),
 		})
 		return
 	}
 
+	// For regular requests, redirect to dashboard
 	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 }
 

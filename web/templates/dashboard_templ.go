@@ -147,7 +147,7 @@ func Dashboard(user *models.User, data DashboardData) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div></div></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div></div></div></div><!-- Delete Confirmation Modal --> <div id=\"delete-modal\" class=\"fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 transition-opacity duration-300\"><div class=\"relative top-20 mx-auto p-0 border-0 w-96 shadow-lg rounded-lg bg-white transform transition-all duration-300 scale-95\" id=\"modal-content\"><!-- Header --><div class=\"px-6 py-6 border-b border-gray-200\"><div class=\"flex items-center\"><div class=\"flex-shrink-0\"><div class=\"w-10 h-10 bg-red-100 rounded-full flex items-center justify-center\"><svg class=\"w-6 h-6 text-red-600\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16\"></path></svg></div></div><div class=\"ml-4\"><h3 class=\"text-lg font-semibold text-gray-900\">Delete Project</h3><p class=\"text-sm text-gray-500\">This action cannot be undone</p></div></div></div><!-- Content --><div class=\"px-6 py-6\"><p class=\"text-gray-600 mb-4\">Are you sure you want to delete  <span id=\"delete-project-name\" class=\"font-semibold text-gray-900\"></span>?</p><div class=\"bg-gray-50 p-4 rounded-md\"><div class=\"flex\"><svg class=\"h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0\" fill=\"currentColor\" viewBox=\"0 0 20 20\"><path fill-rule=\"evenodd\" d=\"M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z\" clip-rule=\"evenodd\"></path></svg><div class=\"ml-3\"><p class=\"text-sm text-gray-700\">All project data, deployments, and environment variables will be permanently deleted.</p></div></div></div></div><!-- Actions --><div class=\"px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg\"><div class=\"flex space-x-3\"><button id=\"confirm-delete-btn\" class=\"flex-1 inline-flex justify-center items-center px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors\" onclick=\"confirmDelete()\"><svg class=\"w-4 h-4 mr-2\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16\"></path></svg> Delete Project</button> <button class=\"flex-1 inline-flex justify-center items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors\" onclick=\"hideDeleteModal()\">Cancel</button></div></div></div></div><!-- JavaScript for modal handling --> <script>\n        let deleteProjectId = null;\n\n        // Use event delegation for delete buttons\n        document.addEventListener('click', function(e) {\n            if (e.target.closest('.delete-project-btn')) {\n                const btn = e.target.closest('.delete-project-btn');\n                const projectId = parseInt(btn.dataset.projectId);\n                const projectName = btn.dataset.projectName;\n                showDeleteModal(projectId, projectName);\n            }\n        });\n\n        function showDeleteModal(projectId, projectName) {\n            deleteProjectId = projectId;\n            document.getElementById('delete-project-name').textContent = projectName;\n            const modal = document.getElementById('delete-modal');\n            const modalContent = document.getElementById('modal-content');\n            \n            modal.classList.remove('hidden');\n            \n            // Animate modal appearance\n            setTimeout(() => {\n                modal.classList.remove('bg-opacity-50');\n                modal.classList.add('bg-opacity-50');\n                modalContent.classList.remove('scale-95');\n                modalContent.classList.add('scale-100');\n            }, 10);\n        }\n\n        function hideDeleteModal() {\n            const modal = document.getElementById('delete-modal');\n            const modalContent = document.getElementById('modal-content');\n            \n            // Animate modal disappearance\n            modalContent.classList.remove('scale-100');\n            modalContent.classList.add('scale-95');\n            \n            setTimeout(() => {\n                modal.classList.add('hidden');\n                deleteProjectId = null;\n            }, 200);\n        }\n\n        function confirmDelete() {\n            if (!deleteProjectId) return;\n\n            const confirmBtn = document.getElementById('confirm-delete-btn');\n            const originalHTML = confirmBtn.innerHTML;\n            \n            // Show loading state\n            confirmBtn.innerHTML = `\n                <svg class=\"animate-spin -ml-1 mr-2 h-4 w-4 text-white\" xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\">\n                    <circle class=\"opacity-25\" cx=\"12\" cy=\"12\" r=\"10\" stroke=\"currentColor\" stroke-width=\"4\"></circle>\n                    <path class=\"opacity-75\" fill=\"currentColor\" d=\"M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z\"></path>\n                </svg>\n                Deleting...\n            `;\n            confirmBtn.disabled = true;\n            confirmBtn.classList.add('opacity-75', 'cursor-not-allowed');\n\n            // Use fetch instead of htmx.ajax to better control the response\n            fetch(`/projects/${deleteProjectId}`, {\n                method: 'DELETE',\n                headers: {\n                    'Content-Type': 'application/json',\n                    'HX-Request': 'true'\n                }\n            })\n            .then(response => {\n                if (!response.ok) {\n                    throw new Error('Network response was not ok');\n                }\n                return response.json();\n            })\n            .then(data => {\n                if (data.success) {\n                    // Hide modal with animation\n                    hideDeleteModal();\n                    \n                    // Remove project card from DOM with smooth animation\n                    const projectCard = document.getElementById(`project-card-${deleteProjectId}`);\n                    if (projectCard) {\n                        projectCard.style.transition = 'all 0.3s ease-out';\n                        projectCard.style.opacity = '0';\n                        projectCard.style.transform = 'translateY(-10px)';\n                        \n                        setTimeout(() => {\n                            projectCard.remove();\n                            checkEmptyState();\n                        }, 300);\n                    }\n\n                    // Show success notification\n                    showNotification(data.message || 'Project deleted successfully', 'success');\n                } else {\n                    throw new Error(data.error || 'Failed to delete project');\n                }\n            })\n            .catch(error => {\n                console.error('Error deleting project:', error);\n                showNotification(error.message || 'Failed to delete project. Please try again.', 'error');\n                \n                // Reset button state\n                confirmBtn.innerHTML = originalHTML;\n                confirmBtn.disabled = false;\n                confirmBtn.classList.remove('opacity-75', 'cursor-not-allowed');\n            });\n        }\n\n        function checkEmptyState() {\n            const projectsGrid = document.querySelector('.grid');\n            if (projectsGrid && projectsGrid.children.length === 0) {\n                // Smoothly transition to empty state\n                setTimeout(() => {\n                    window.location.reload();\n                }, 1000);\n            }\n        }\n\n        function showNotification(message, type) {\n            const notification = document.createElement('div');\n            notification.className = `fixed top-4 right-4 z-50 max-w-sm w-full transition-all duration-300 transform translate-x-full`;\n            \n            const bgClass = type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';\n            const iconColor = type === 'success' ? 'text-green-400' : 'text-red-400';\n            \n            notification.innerHTML = `\n                <div class=\"border ${bgClass} p-4 rounded-lg shadow-sm\">\n                    <div class=\"flex items-center\">\n                        <div class=\"flex-shrink-0\">\n                            <svg class=\"h-5 w-5 ${iconColor}\" fill=\"currentColor\" viewBox=\"0 0 20 20\">\n                                ${type === 'success' \n                                    ? '<path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z\" clip-rule=\"evenodd\" />'\n                                    : '<path fill-rule=\"evenodd\" d=\"M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z\" clip-rule=\"evenodd\" />'\n                                }\n                            </svg>\n                        </div>\n                        <div class=\"ml-3\">\n                            <p class=\"text-sm font-medium\">${message}</p>\n                        </div>\n                        <div class=\"ml-4 flex-shrink-0\">\n                            <button class=\"${iconColor} hover:opacity-70 transition-opacity\" onclick=\"this.closest('div').parentElement.remove()\">\n                                <svg class=\"h-4 w-4\" fill=\"none\" viewBox=\"0 0 24 24\" stroke=\"currentColor\">\n                                    <path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\" />\n                                </svg>\n                            </button>\n                        </div>\n                    </div>\n                </div>\n            `;\n            \n            document.body.appendChild(notification);\n            \n            // Show notification with slide animation\n            setTimeout(() => {\n                notification.style.transform = 'translateX(0)';\n            }, 100);\n            \n            // Auto-hide after 4 seconds\n            setTimeout(() => {\n                notification.style.transform = 'translateX(100%)';\n                setTimeout(() => {\n                    if (notification.parentNode) {\n                        notification.remove();\n                    }\n                }, 300);\n            }, 4000);\n        }\n\n        // Close modal when clicking outside or pressing Escape\n        document.getElementById('delete-modal').addEventListener('click', function(e) {\n            if (e.target === this) {\n                hideDeleteModal();\n            }\n        });\n\n        document.addEventListener('keydown', function(e) {\n            if (e.key === 'Escape' && deleteProjectId !== null) {\n                hideDeleteModal();\n            }\n        });\n    </script>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -182,146 +182,185 @@ func ProjectCard(project models.Project, baseDomain string) templ.Component {
 			templ_7745c5c3_Var8 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div class=\"bg-white overflow-hidden shadow rounded-lg card-hover\"><div class=\"px-4 py-5 sm:p-6\"><div class=\"flex items-center justify-between\"><div class=\"flex items-center\"><div class=\"flex-shrink-0\"><div class=\"w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg flex items-center justify-center\"><i class=\"fas fa-code text-white text-sm\"></i></div></div><div class=\"ml-4\"><h3 class=\"text-lg font-medium text-gray-900\"><a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div class=\"bg-white overflow-hidden shadow rounded-lg card-hover\" id=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var9 templ.SafeURL
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/projects/%d", project.ID)))
+		var templ_7745c5c3_Var9 string
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("project-card-%d", project.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 210, Col: 84}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 446, Col: 114}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" class=\"hover:text-purple-600 transition-colors\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\"><div class=\"px-4 py-5 sm:p-6\"><div class=\"flex items-center justify-between\"><div class=\"flex items-center\"><div class=\"flex-shrink-0\"><div class=\"w-10 h-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg flex items-center justify-center\"><i class=\"fas fa-code text-white text-sm\"></i></div></div><div class=\"ml-4\"><h3 class=\"text-lg font-medium text-gray-900\"><a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(project.Name)
+		var templ_7745c5c3_Var10 templ.SafeURL
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/projects/%d", project.ID)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 212, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 457, Col: 84}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</a></h3><p class=\"text-sm text-gray-500\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" class=\"hover:text-purple-600 transition-colors\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var11 string
-		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(project.Branch)
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(project.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 215, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 459, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</p></div></div><div class=\"flex-shrink-0\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</a></h3><p class=\"text-sm text-gray-500\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if project.Status == "active" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<span class=\"inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800\"><span class=\"mr-1 h-1.5 w-1.5 rounded-full bg-green-400\"></span> Active</span>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else if project.Status == "building" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<span class=\"inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800\"><span class=\"mr-1 h-1.5 w-1.5 rounded-full bg-yellow-400\"></span> Building</span>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else if project.Status == "failed" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<span class=\"inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800\"><span class=\"mr-1 h-1.5 w-1.5 rounded-full bg-red-400\"></span> Failed</span>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<span class=\"inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800\"><span class=\"mr-1 h-1.5 w-1.5 rounded-full bg-gray-400\"></span> Inactive</span>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</div></div><div class=\"mt-4\"><div class=\"flex items-center text-sm text-gray-500\"><i class=\"fas fa-link mr-2\"></i> <a href=\"")
+		var templ_7745c5c3_Var12 string
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(project.Branch)
 		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var12 templ.SafeURL
-		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("http://%s.%s", project.Subdomain, baseDomain)))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 246, Col: 95}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 462, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\" target=\"_blank\" class=\"text-purple-600 hover:text-purple-500 transition-colors\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</p></div></div><div class=\"flex-shrink-0\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var13 string
-		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%s.%s", project.Subdomain, baseDomain))
+		if project.Status == "active" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<span class=\"inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800\"><span class=\"mr-1 h-1.5 w-1.5 rounded-full bg-green-400\"></span> Active</span>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else if project.Status == "building" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<span class=\"inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800\"><span class=\"mr-1 h-1.5 w-1.5 rounded-full bg-yellow-400\"></span> Building</span>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else if project.Status == "failed" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<span class=\"inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800\"><span class=\"mr-1 h-1.5 w-1.5 rounded-full bg-red-400\"></span> Failed</span>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<span class=\"inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800\"><span class=\"mr-1 h-1.5 w-1.5 rounded-full bg-gray-400\"></span> Inactive</span>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</div></div><div class=\"mt-4\"><div class=\"flex items-center text-sm text-gray-500\"><i class=\"fas fa-link mr-2\"></i> <a href=\"")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 249, Col: 73}
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var13 templ.SafeURL
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("http://%s.%s", project.Subdomain, baseDomain)))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 493, Col: 95}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, " <i class=\"fas fa-external-link-alt ml-1 text-xs\"></i></a></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\" target=\"_blank\" class=\"text-purple-600 hover:text-purple-500 transition-colors\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var14 string
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%s.%s", project.Subdomain, baseDomain))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 496, Col: 73}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, " <i class=\"fas fa-external-link-alt ml-1 text-xs\"></i></a></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if project.LastDeploy != nil {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<div class=\"flex items-center text-sm text-gray-500 mt-2\"><i class=\"fas fa-clock mr-2\"></i> Last deployed ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<div class=\"flex items-center text-sm text-gray-500 mt-2\"><i class=\"fas fa-clock mr-2\"></i> Last deployed ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var14 string
-			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(project.LastDeploy.Format("Jan 2, 2006 at 3:04pm"))
+			var templ_7745c5c3_Var15 string
+			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(project.LastDeploy.Format("Jan 2, 2006 at 3:04pm"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 256, Col: 86}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 503, Col: 86}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</div>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</div><div class=\"mt-6 flex space-x-3\"><button type=\"button\" hx-get=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var15 string
-		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/projects/%d", project.ID))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 263, Col: 68}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\" hx-target=\"#main-content\" hx-push-url=\"true\" class=\"inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors\"><i class=\"fas fa-eye mr-1\"></i> Details</button> <button type=\"button\" hx-post=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</div><div class=\"mt-6 flex space-x-3\"><button type=\"button\" hx-get=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var16 string
-		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/projects/%d/deploy", project.ID))
+		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/projects/%d", project.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 271, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 510, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" hx-trigger=\"click\" hx-indicator=\".deploy-spinner\" class=\"inline-flex items-center rounded-md bg-purple-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-purple-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600 transition-colors\"><i class=\"fas fa-rocket mr-1\"></i> Deploy</button> <button type=\"button\" class=\"inline-flex items-center rounded-md bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors\"><i class=\"fas fa-trash mr-1\"></i></button></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" hx-target=\"#main-content\" hx-push-url=\"true\" class=\"inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors\"><i class=\"fas fa-eye mr-1\"></i> Details</button> <button type=\"button\" hx-post=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var17 string
+		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/projects/%d/deploy", project.ID))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 518, Col: 76}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "\" hx-trigger=\"click\" hx-indicator=\".deploy-spinner\" class=\"inline-flex items-center rounded-md bg-purple-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-purple-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600 transition-colors\"><i class=\"fas fa-rocket mr-1\"></i> Deploy</button> <button type=\"button\" class=\"delete-project-btn inline-flex items-center rounded-md bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors\" data-project-id=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var18 string
+		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.FormatInt(project.ID, 10))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 527, Col: 71}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\" data-project-name=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var19 string
+		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(project.Name)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 528, Col: 52}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\"><i class=\"fas fa-trash mr-1\"></i> Delete</button></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

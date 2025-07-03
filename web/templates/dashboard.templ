@@ -183,20 +183,267 @@ templ Dashboard(user *models.User, data DashboardData) {
                     } else {
                         <!-- Projects Grid -->
                         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                                                    for _, project := range data.Projects {
-                            @ProjectCard(project, data.BaseDomain)
-                        }
+                            for _, project := range data.Projects {
+                                @ProjectCard(project, data.BaseDomain)
+                            }
                         </div>
                     }
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-modal" class="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 transition-opacity duration-300">
+        <div class="relative top-20 mx-auto p-0 border-0 w-96 shadow-lg rounded-lg bg-white transform transition-all duration-300 scale-95" id="modal-content">
+            <!-- Header -->
+            <div class="px-6 py-6 border-b border-gray-200">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Delete Project</h3>
+                        <p class="text-sm text-gray-500">This action cannot be undone</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="px-6 py-6">
+                <p class="text-gray-600 mb-4">
+                    Are you sure you want to delete 
+                    <span id="delete-project-name" class="font-semibold text-gray-900"></span>?
+                </p>
+                <div class="bg-gray-50 p-4 rounded-md">
+                    <div class="flex">
+                        <svg class="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        <div class="ml-3">
+                            <p class="text-sm text-gray-700">
+                                All project data, deployments, and environment variables will be permanently deleted.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
+                <div class="flex space-x-3">
+                    <button
+                        id="confirm-delete-btn"
+                        class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                        onclick="confirmDelete()">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1H8a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Delete Project
+                    </button>
+                    <button
+                        class="flex-1 inline-flex justify-center items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors"
+                        onclick="hideDeleteModal()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript for modal handling -->
+    <script>
+        let deleteProjectId = null;
+
+        // Use event delegation for delete buttons
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.delete-project-btn')) {
+                const btn = e.target.closest('.delete-project-btn');
+                const projectId = parseInt(btn.dataset.projectId);
+                const projectName = btn.dataset.projectName;
+                showDeleteModal(projectId, projectName);
+            }
+        });
+
+        function showDeleteModal(projectId, projectName) {
+            deleteProjectId = projectId;
+            document.getElementById('delete-project-name').textContent = projectName;
+            const modal = document.getElementById('delete-modal');
+            const modalContent = document.getElementById('modal-content');
+            
+            modal.classList.remove('hidden');
+            
+            // Animate modal appearance
+            setTimeout(() => {
+                modal.classList.remove('bg-opacity-50');
+                modal.classList.add('bg-opacity-50');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        function hideDeleteModal() {
+            const modal = document.getElementById('delete-modal');
+            const modalContent = document.getElementById('modal-content');
+            
+            // Animate modal disappearance
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                deleteProjectId = null;
+            }, 200);
+        }
+
+        function confirmDelete() {
+            if (!deleteProjectId) return;
+
+            const confirmBtn = document.getElementById('confirm-delete-btn');
+            const originalHTML = confirmBtn.innerHTML;
+            
+            // Show loading state
+            confirmBtn.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Deleting...
+            `;
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add('opacity-75', 'cursor-not-allowed');
+
+            // Use fetch instead of htmx.ajax to better control the response
+            fetch(`/projects/${deleteProjectId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'HX-Request': 'true'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    // Hide modal with animation
+                    hideDeleteModal();
+                    
+                    // Remove project card from DOM with smooth animation
+                    const projectCard = document.getElementById(`project-card-${deleteProjectId}`);
+                    if (projectCard) {
+                        projectCard.style.transition = 'all 0.3s ease-out';
+                        projectCard.style.opacity = '0';
+                        projectCard.style.transform = 'translateY(-10px)';
+                        
+                        setTimeout(() => {
+                            projectCard.remove();
+                            checkEmptyState();
+                        }, 300);
+                    }
+
+                    // Show success notification
+                    showNotification(data.message || 'Project deleted successfully', 'success');
+                } else {
+                    throw new Error(data.error || 'Failed to delete project');
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting project:', error);
+                showNotification(error.message || 'Failed to delete project. Please try again.', 'error');
+                
+                // Reset button state
+                confirmBtn.innerHTML = originalHTML;
+                confirmBtn.disabled = false;
+                confirmBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+            });
+        }
+
+        function checkEmptyState() {
+            const projectsGrid = document.querySelector('.grid');
+            if (projectsGrid && projectsGrid.children.length === 0) {
+                // Smoothly transition to empty state
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 max-w-sm w-full transition-all duration-300 transform translate-x-full`;
+            
+            const bgClass = type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
+            const iconColor = type === 'success' ? 'text-green-400' : 'text-red-400';
+            
+            notification.innerHTML = `
+                <div class="border ${bgClass} p-4 rounded-lg shadow-sm">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 ${iconColor}" fill="currentColor" viewBox="0 0 20 20">
+                                ${type === 'success' 
+                                    ? '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />'
+                                    : '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />'
+                                }
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium">${message}</p>
+                        </div>
+                        <div class="ml-4 flex-shrink-0">
+                            <button class="${iconColor} hover:opacity-70 transition-opacity" onclick="this.closest('div').parentElement.remove()">
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Show notification with slide animation
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+            
+            // Auto-hide after 4 seconds
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 300);
+            }, 4000);
+        }
+
+        // Close modal when clicking outside or pressing Escape
+        document.getElementById('delete-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideDeleteModal();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && deleteProjectId !== null) {
+                hideDeleteModal();
+            }
+        });
+    </script>
 }
 }
 
 templ ProjectCard(project models.Project, baseDomain string) {
-<div class="bg-white overflow-hidden shadow rounded-lg card-hover">
+<div class="bg-white overflow-hidden shadow rounded-lg card-hover" id={ fmt.Sprintf("project-card-%d", project.ID) }>
     <div class="px-4 py-5 sm:p-6">
         <div class="flex items-center justify-between">
             <div class="flex items-center">
@@ -276,8 +523,11 @@ templ ProjectCard(project models.Project, baseDomain string) {
                 Deploy
             </button>
             <button type="button" 
-                    class="inline-flex items-center rounded-md bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors">
+                    class="delete-project-btn inline-flex items-center rounded-md bg-red-600 px-2.5 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-red-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 transition-colors"
+                    data-project-id={ strconv.FormatInt(project.ID, 10) }
+                    data-project-name={ project.Name }>
                 <i class="fas fa-trash mr-1"></i>
+                Delete
             </button>
         </div>
     </div>
