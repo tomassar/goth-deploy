@@ -7,12 +7,13 @@ import (
 )
 
 type DashboardData struct {
-	TotalProjects    int
-	ActiveProjects   int
-	DeployedToday    int
-	SuccessRate      float64
-	Projects         []models.Project
+	TotalProjects     int
+	ActiveProjects    int
+	DeployedToday     int
+	SuccessRate       float64
+	Projects          []models.Project
 	RecentDeployments []models.Deployment
+	BaseDomain        string
 }
 
 templ Dashboard(user *models.User, data DashboardData) {
@@ -188,9 +189,9 @@ templ Dashboard(user *models.User, data DashboardData) {
                     } else {
                         <!-- Projects Grid -->
                         <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                            for _, project := range data.Projects {
-                                @ProjectCard(project)
-                            }
+                                                    for _, project := range data.Projects {
+                            @ProjectCard(project, data.BaseDomain)
+                        }
                         </div>
                     }
                 </div>
@@ -200,7 +201,7 @@ templ Dashboard(user *models.User, data DashboardData) {
 }
 }
 
-templ ProjectCard(project models.Project) {
+templ ProjectCard(project models.Project, baseDomain string) {
 <div class="bg-white overflow-hidden shadow rounded-lg card-hover">
     <div class="px-4 py-5 sm:p-6">
         <div class="flex items-center justify-between">
@@ -248,10 +249,10 @@ templ ProjectCard(project models.Project) {
         <div class="mt-4">
             <div class="flex items-center text-sm text-gray-500">
                 <i class="fas fa-link mr-2"></i>
-                <a href={ templ.URL(fmt.Sprintf("https://%s", project.Subdomain)) } 
+                <a href={ templ.URL(fmt.Sprintf("http://%s.%s", project.Subdomain, baseDomain)) } 
                    target="_blank" 
                    class="text-purple-600 hover:text-purple-500 transition-colors">
-                    { project.Subdomain }
+                    { fmt.Sprintf("%s.%s", project.Subdomain, baseDomain) }
                     <i class="fas fa-external-link-alt ml-1 text-xs"></i>
                 </a>
             </div>

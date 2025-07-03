@@ -170,7 +170,9 @@ func (h *Handler) HealthHandler(w http.ResponseWriter, r *http.Request) {
 
 // getDashboardData retrieves data for the dashboard
 func (h *Handler) getDashboardData(userID int64) (templates.DashboardData, error) {
-	data := templates.DashboardData{}
+	data := templates.DashboardData{
+		BaseDomain: h.Config.BaseDomain,
+	}
 
 	// Get projects count
 	err := h.DB.QueryRow("SELECT COUNT(*) FROM projects WHERE user_id = ?", userID).Scan(&data.TotalProjects)

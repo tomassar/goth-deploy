@@ -21,6 +21,7 @@ type DashboardData struct {
 	SuccessRate       float64
 	Projects          []models.Project
 	RecentDeployments []models.Deployment
+	BaseDomain        string
 }
 
 func Dashboard(user *models.User, data DashboardData) templ.Component {
@@ -63,7 +64,7 @@ func Dashboard(user *models.User, data DashboardData) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(user.Username)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 36, Col: 69}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 37, Col: 69}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -76,7 +77,7 @@ func Dashboard(user *models.User, data DashboardData) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.TotalProjects))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 71, Col: 116}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 72, Col: 116}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -89,7 +90,7 @@ func Dashboard(user *models.User, data DashboardData) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.ActiveProjects))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 92, Col: 117}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 93, Col: 117}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -102,7 +103,7 @@ func Dashboard(user *models.User, data DashboardData) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(data.DeployedToday))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 113, Col: 116}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 114, Col: 116}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -115,7 +116,7 @@ func Dashboard(user *models.User, data DashboardData) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f%%", data.SuccessRate))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 134, Col: 123}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 135, Col: 123}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -136,7 +137,7 @@ func Dashboard(user *models.User, data DashboardData) templ.Component {
 					return templ_7745c5c3_Err
 				}
 				for _, project := range data.Projects {
-					templ_7745c5c3_Err = ProjectCard(project).Render(ctx, templ_7745c5c3_Buffer)
+					templ_7745c5c3_Err = ProjectCard(project, data.BaseDomain).Render(ctx, templ_7745c5c3_Buffer)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -160,7 +161,7 @@ func Dashboard(user *models.User, data DashboardData) templ.Component {
 	})
 }
 
-func ProjectCard(project models.Project) templ.Component {
+func ProjectCard(project models.Project, baseDomain string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -188,7 +189,7 @@ func ProjectCard(project models.Project) templ.Component {
 		var templ_7745c5c3_Var9 templ.SafeURL
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("/projects/%d", project.ID)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 215, Col: 84}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 216, Col: 84}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -201,7 +202,7 @@ func ProjectCard(project models.Project) templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(project.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 217, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 218, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -214,7 +215,7 @@ func ProjectCard(project models.Project) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(project.Branch)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 220, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 221, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -250,9 +251,9 @@ func ProjectCard(project models.Project) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var12 templ.SafeURL
-		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("https://%s", project.Subdomain)))
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.URL(fmt.Sprintf("http://%s.%s", project.Subdomain, baseDomain)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 251, Col: 81}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 252, Col: 95}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -263,9 +264,9 @@ func ProjectCard(project models.Project) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var13 string
-		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(project.Subdomain)
+		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%s.%s", project.Subdomain, baseDomain))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 254, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 255, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -283,7 +284,7 @@ func ProjectCard(project models.Project) templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(project.LastDeploy.Format("Jan 2, 2006 at 3:04pm"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 261, Col: 86}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 262, Col: 86}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -301,7 +302,7 @@ func ProjectCard(project models.Project) templ.Component {
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/projects/%d", project.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 268, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 269, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -314,7 +315,7 @@ func ProjectCard(project models.Project) templ.Component {
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("/projects/%d/deploy", project.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 276, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `web/templates/dashboard.templ`, Line: 277, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
