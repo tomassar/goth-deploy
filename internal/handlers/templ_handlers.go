@@ -307,11 +307,14 @@ func (h *TemplHandler) DeployProject(w http.ResponseWriter, r *http.Request) {
 
 	// Start deployment in background
 	go func() {
+		fmt.Printf("🚀 DEPLOY: Starting deployment for project %d (%s)\n", project.ID, project.Name)
 		ctx := context.Background()
 
 		// Custom deployment that captures logs
 		deploymentLogs := ""
+		fmt.Printf("🔄 DEPLOY: Calling deploymentService.Deploy for project %d\n", project.ID)
 		err := h.deploymentService.Deploy(ctx, project, "")
+		fmt.Printf("📝 DEPLOY: Deploy call completed for project %d, error: %v\n", project.ID, err)
 
 		status := models.ProjectStatusActive
 		errorMessage := ""
@@ -320,22 +323,27 @@ func (h *TemplHandler) DeployProject(w http.ResponseWriter, r *http.Request) {
 			status = models.ProjectStatusFailed
 			errorMessage = err.Error()
 			deploymentLogs = fmt.Sprintf("Deployment failed: %v", err)
+			fmt.Printf("❌ DEPLOY: Project %d failed: %v\n", project.ID, err)
 
 			// Save build logs to project
 			h.deploymentService.SaveBuildLogsToDatabase(h.db, project.ID, deploymentLogs)
 		} else {
 			deploymentLogs = "Deployment completed successfully"
+			fmt.Printf("✅ DEPLOY: Project %d completed successfully\n", project.ID)
 			// Save successful build logs to project
 			h.deploymentService.SaveBuildLogsToDatabase(h.db, project.ID, deploymentLogs)
 		}
 
 		// Update project status
+		fmt.Printf("📊 DEPLOY: Updating project %d status to %s\n", project.ID, status)
 		h.db.Exec(`
 			UPDATE projects SET status = ?, last_deploy_at = ?, updated_at = ? WHERE id = ?
 		`, status, time.Now(), time.Now(), project.ID)
 
 		// Update deployment record
+		fmt.Printf("📋 DEPLOY: Updating deployment record %d\n", deploymentID)
 		h.deploymentService.UpdateDeploymentRecord(h.db, deploymentID, status, deploymentLogs, errorMessage)
+		fmt.Printf("🏁 DEPLOY: Deployment process completed for project %d\n", project.ID)
 	}()
 
 	// Return HTMX response
@@ -376,7 +384,7 @@ func (h *TemplHandler) saveUser(githubUser *github.User, email, accessToken stri
 
 func (h *TemplHandler) getUserProjects(userID int) ([]models.Project, error) {
 	rows, err := h.db.Query(`
-		SELECT id, user_id, name, repository, branch, subdomain, status, build_logs, last_deploy_at, created_at, updated_at
+		SELECT id, user_id, name, repository, branch, subdomain, status, COALESCE(build_logs, '') as build_logs, last_deploy_at, created_at, updated_at
 		FROM projects WHERE user_id = ? ORDER BY created_at DESC
 	`, userID)
 	if err != nil {
@@ -402,7 +410,7 @@ func (h *TemplHandler) getUserProjects(userID int) ([]models.Project, error) {
 func (h *TemplHandler) getProject(projectID string, userID int) (*models.Project, error) {
 	var project models.Project
 	err := h.db.QueryRow(`
-		SELECT id, user_id, name, repository, branch, subdomain, status, build_logs, last_deploy_at, created_at, updated_at
+		SELECT id, user_id, name, repository, branch, subdomain, status, COALESCE(build_logs, '') as build_logs, last_deploy_at, created_at, updated_at
 		FROM projects WHERE id = ? AND user_id = ?
 	`, projectID, userID).Scan(&project.ID, &project.UserID, &project.Name, &project.Repository,
 		&project.Branch, &project.Subdomain, &project.Status, &project.BuildLogs, &project.LastDeployAt,
@@ -427,7 +435,7 @@ func (h *TemplHandler) GetProject(w http.ResponseWriter, r *http.Request) {
 	// Get project with build_logs
 	var project models.Project
 	err = h.db.QueryRow(`
-		SELECT id, user_id, name, repository, branch, subdomain, status, build_logs, last_deploy_at, created_at, updated_at
+		SELECT id, user_id, name, repository, branch, subdomain, status, COALESCE(build_logs, '') as build_logs, last_deploy_at, created_at, updated_at
 		FROM projects WHERE id = ? AND user_id = ?
 	`, projectID, user.ID).Scan(&project.ID, &project.UserID, &project.Name, &project.Repository,
 		&project.Branch, &project.Subdomain, &project.Status, &project.BuildLogs,

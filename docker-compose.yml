@@ -19,9 +19,9 @@ services:
       - ISOLATION_CHROOT_BASE=/var/lib/deployer/chroot
       - ISOLATION_ENABLE_CHROOT=${ISOLATION_ENABLE_CHROOT:-false}
     volumes:
-      - ./data:/app/data
-      - ./deployments:/app/deployments
       - deployer_lib:/var/lib/deployer
+      - deployer_data:/app/data
+      - deployer_deployments:/app/deployments
     privileged: true
     restart: unless-stopped
     networks:
@@ -29,6 +29,10 @@ services:
 
 volumes:
   deployer_lib:
+    driver: local
+  deployer_data:
+    driver: local
+  deployer_deployments:
     driver: local
 
 networks:

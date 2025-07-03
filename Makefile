@@ -18,7 +18,7 @@ install:
 	@echo "Installing templ CLI..."
 	go install github.com/a-h/templ/cmd/templ@latest
 	@echo "Creating necessary directories..."
-	mkdir -p data deployments/logs web/static
+	mkdir -p web/static
 	@echo "Installation complete!"
 
 # Generate templ files
