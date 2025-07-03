@@ -4,25 +4,30 @@
 *.dll
 *.so
 *.dylib
-bin/
-dist/
 
 # Test binary, built with `go test -c`
 *.test
 
-# Output of the go coverage tool
+# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
-# Dependency directories
-vendor/
+# Dependency directories (remove the comment below to include it)
+# vendor/
 
 # Go workspace file
 go.work
 
+# Project specific binaries
+goth-deploy
+deployer
+
 # Environment files
 .env
 .env.local
-.env.*.local
+.env.development
+.env.test
+.env.production
+*.env
 
 # Database files
 data/
@@ -30,11 +35,12 @@ data/
 *.sqlite
 *.sqlite3
 
-# Deployment files
+# Deployment directories and logs
 deployments/
-!deployments/.gitkeep
+logs/
+*.log
 
-# IDE files
+# IDE and editor files
 .vscode/
 .idea/
 *.swp
@@ -50,19 +56,35 @@ deployments/
 ehthumbs.db
 Thumbs.db
 
-# Logs
-*.log
-logs/
-
-# Generated templ files
-*_templ.go
-
-# Static build files
-web/static/dist/
-node_modules/
-
 # Temporary files
 tmp/
-temp/ 
+temp/
+*.tmp
 
-DOCKER-SETUP.md
+# Docker files (if not needed in repo)
+.dockerignore
+
+# Secrets and sensitive files
+SECRETS.md
+secrets/
+*.key
+*.pem
+*.crt
+
+# Build artifacts
+dist/
+build/
+
+# Node modules (if any frontend tooling)
+node_modules/
+
+# Coverage files
+coverage.out
+coverage.html
+
+# Air live reload (if used)
+.air.toml
+tmp/
+
+# Cursor/AI assistant files
+.cursor/ 

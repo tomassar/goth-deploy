@@ -1,0 +1,356 @@
+package templates
+
+import (
+	"goth-deploy/internal/models"
+)
+
+templ NewProject(user *models.User) {
+@Base("New Project", user) {
+    <div class="min-h-screen bg-gray-50">
+        <!-- Header -->
+        <div class="bg-white shadow">
+            <div class="px-4 sm:px-6 lg:max-w-6xl lg:mx-auto lg:px-8">
+                <div class="py-6 md:flex md:items-center md:justify-between">
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center">
+                            <div>
+                                <div class="flex items-center">
+                                    <h1 class="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
+                                        Create New Project
+                                    </h1>
+                                </div>
+                                <dl class="mt-6 flex flex-col sm:ml-3 sm:mt-1 sm:flex-row sm:flex-wrap">
+                                    <dt class="sr-only">Description</dt>
+                                    <dd class="text-sm text-gray-500">
+                                        Deploy your Go applications from GitHub repositories
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex space-x-3 md:ml-4 md:mt-0">
+                        <a href="/dashboard" 
+                           class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-arrow-left mr-2"></i>
+                            Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-6 py-8">
+                    <!-- Step 1: Repository Selection -->
+                    <div id="step-1">
+                        <div class="mb-8">
+                            <h2 class="text-lg font-semibold text-gray-900 mb-2">Step 1: Select Repository</h2>
+                            <p class="text-sm text-gray-600">Choose a GitHub repository to deploy</p>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div id="repos-loading" class="text-center py-12">
+                            <div class="inline-flex items-center px-4 py-2 font-semibold leading-6 text-sm shadow rounded-md text-purple-500 bg-purple-100">
+                                <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-purple-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Loading your repositories...
+                            </div>
+                        </div>
+
+                        <!-- Repository List -->
+                        <div id="repos-list" class="hidden">
+                            <div class="mb-4">
+                                <input type="text" 
+                                       id="repo-search" 
+                                       placeholder="Search repositories..." 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                            </div>
+                            <div id="repos-container" class="space-y-3 max-h-96 overflow-y-auto">
+                                <!-- Repositories will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Project Configuration -->
+                    <div id="step-2" class="hidden">
+                        <div class="mb-8">
+                            <h2 class="text-lg font-semibold text-gray-900 mb-2">Step 2: Configure Project</h2>
+                            <p class="text-sm text-gray-600">Set up deployment configuration</p>
+                        </div>
+
+                        <form id="project-form" class="space-y-6">
+                            <input type="hidden" id="selected-repo-id" name="github_repo_id">
+                            <input type="hidden" id="selected-repo-url" name="repo_url">
+                            
+                            <!-- Project Name -->
+                            <div>
+                                <label for="project-name" class="block text-sm font-medium text-gray-700">Project Name</label>
+                                <input type="text" 
+                                       id="project-name" 
+                                       name="name" 
+                                       required
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                                <p class="mt-1 text-xs text-gray-500">A friendly name for your project</p>
+                            </div>
+
+                            <!-- Branch -->
+                            <div>
+                                <label for="branch" class="block text-sm font-medium text-gray-700">Branch</label>
+                                <input type="text" 
+                                       id="branch" 
+                                       name="branch" 
+                                       value="main" 
+                                       required
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                                <p class="mt-1 text-xs text-gray-500">Git branch to deploy</p>
+                            </div>
+
+                            <!-- Subdomain -->
+                            <div>
+                                <label for="subdomain" class="block text-sm font-medium text-gray-700">Subdomain</label>
+                                <div class="mt-1 flex rounded-md shadow-sm">
+                                    <input type="text" 
+                                           id="subdomain" 
+                                           name="subdomain" 
+                                           required
+                                           class="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                                    <span class="inline-flex items-center px-3 py-2 border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm rounded-r-md">
+                                        .localhost:8080
+                                    </span>
+                                </div>
+                                <p class="mt-1 text-xs text-gray-500">Your app will be available at this subdomain</p>
+                            </div>
+
+                            <!-- Build Command -->
+                            <div>
+                                <label for="build-command" class="block text-sm font-medium text-gray-700">Build Command</label>
+                                <input type="text" 
+                                       id="build-command" 
+                                       name="build_command" 
+                                       value="go build -o main ." 
+                                       required
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                                <p class="mt-1 text-xs text-gray-500">Command to build your application</p>
+                            </div>
+
+                            <!-- Start Command -->
+                            <div>
+                                <label for="start-command" class="block text-sm font-medium text-gray-700">Start Command</label>
+                                <input type="text" 
+                                       id="start-command" 
+                                       name="start_command" 
+                                       value="./main" 
+                                       required
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                                <p class="mt-1 text-xs text-gray-500">Command to start your application</p>
+                            </div>
+
+                            <!-- Port -->
+                            <div>
+                                <label for="port" class="block text-sm font-medium text-gray-700">Port</label>
+                                <input type="number" 
+                                       id="port" 
+                                       name="port" 
+                                       value="8080" 
+                                       min="1" 
+                                       max="65535"
+                                       required
+                                       class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500">
+                                <p class="mt-1 text-xs text-gray-500">Port your application listens on</p>
+                            </div>
+
+                            <!-- Form Actions -->
+                            <div class="flex justify-between pt-6">
+                                <button type="button" 
+                                        onclick="showStep1()"
+                                        class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                    <i class="fas fa-arrow-left mr-2"></i>
+                                    Back
+                                </button>
+                                <button type="submit" 
+                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                                    <i class="fas fa-rocket mr-2"></i>
+                                    Create & Deploy Project
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        let repositories = [];
+        
+        // Helper function to escape HTML special characters
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Load repositories on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRepositories();
+        });
+
+        function loadRepositories() {
+            fetch('/api/github/repos')
+                .then(response => response.json())
+                .then(data => {
+                    repositories = data;
+                    displayRepositories(repositories);
+                    document.getElementById('repos-loading').classList.add('hidden');
+                    document.getElementById('repos-list').classList.remove('hidden');
+                })
+                .catch(error => {
+                    console.error('Error loading repositories:', error);
+                    document.getElementById('repos-loading').innerHTML = `
+                        <div class="text-center py-12">
+                            <div class="text-red-600">
+                                <i class="fas fa-exclamation-triangle text-2xl mb-2"></i>
+                                <p>Failed to load repositories</p>
+                                <button onclick="loadRepositories()" class="mt-2 text-sm text-purple-600 hover:text-purple-500">Try again</button>
+                            </div>
+                        </div>
+                    `;
+                });
+        }
+
+        function displayRepositories(repos) {
+            const container = document.getElementById('repos-container');
+            container.innerHTML = repos.map((repo, index) => `
+                <div class="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors repo-item" 
+                     data-repo-index="${index}">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <h3 class="text-sm font-medium text-gray-900">${escapeHtml(repo.full_name)}</h3>
+                            <p class="text-xs text-gray-500 mt-1">${escapeHtml(repo.description || 'No description')}</p>
+                            <div class="flex items-center mt-2 text-xs text-gray-400">
+                                <span class="flex items-center mr-4">
+                                    <i class="fas fa-code mr-1"></i>
+                                    ${escapeHtml(repo.language || 'Unknown')}
+                                </span>
+                                <span class="flex items-center">
+                                    <i class="fas fa-code-branch mr-1"></i>
+                                    ${escapeHtml(repo.default_branch)}
+                                </span>
+                                ${repo.private ? '<span class="ml-4 px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">Private</span>' : ''}
+                            </div>
+                        </div>
+                        <div class="ml-4">
+                            <i class="fas fa-chevron-right text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add event listeners to repository items
+            container.querySelectorAll('.repo-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const repoIndex = parseInt(this.getAttribute('data-repo-index'));
+                    const repo = repos[repoIndex];
+                    selectRepository(repo.id, repo.clone_url, repo.name);
+                });
+            });
+        }
+
+        function selectRepository(repoId, repoUrl, repoName) {
+            console.log('Selecting repository:', { repoId, repoUrl, repoName });
+            
+            // Store selected repository
+            document.getElementById('selected-repo-id').value = repoId;
+            document.getElementById('selected-repo-url').value = repoUrl;
+            
+            // Auto-fill project name and subdomain
+            document.getElementById('project-name').value = repoName;
+            document.getElementById('subdomain').value = generateSubdomain(repoName);
+            
+            console.log('Set hidden fields:', {
+                github_repo_id: document.getElementById('selected-repo-id').value,
+                repo_url: document.getElementById('selected-repo-url').value
+            });
+            
+            // Show step 2
+            showStep2();
+        }
+
+        function generateSubdomain(repoName) {
+            // Generate a subdomain based on repo name with random suffix
+            const clean = repoName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+            const randomSuffix = Math.random().toString(36).substring(2, 6);
+            return `${clean}-${randomSuffix}`;
+        }
+
+        function showStep1() {
+            document.getElementById('step-1').classList.remove('hidden');
+            document.getElementById('step-2').classList.add('hidden');
+        }
+
+        function showStep2() {
+            document.getElementById('step-1').classList.add('hidden');
+            document.getElementById('step-2').classList.remove('hidden');
+        }
+
+        // Search functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('repo-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    const query = e.target.value.toLowerCase();
+                    const filtered = repositories.filter(repo => 
+                        repo.full_name.toLowerCase().includes(query) ||
+                        (repo.description && repo.description.toLowerCase().includes(query))
+                    );
+                    displayRepositories(filtered);
+                });
+            }
+        });
+
+        // Form submission
+        document.getElementById('project-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitButton = this.querySelector('button[type="submit"]');
+            
+            // Debug: Log all form data
+            console.log('Form submission data:');
+            for (let [key, value] of formData.entries()) {
+                console.log(key, ':', value);
+            }
+            
+            // Show loading state
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating Project...';
+            submitButton.disabled = true;
+            
+            fetch('/projects', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = '/dashboard';
+                } else {
+                    return response.text().then(text => {
+                        throw new Error(text);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error creating project:', error);
+                alert('Failed to create project: ' + error.message);
+                submitButton.innerHTML = '<i class="fas fa-rocket mr-2"></i>Create & Deploy Project';
+                submitButton.disabled = false;
+            });
+        });
+    </script>
+}
+} 

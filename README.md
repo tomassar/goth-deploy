@@ -1,190 +1,191 @@
-# GoTH Deployer
+# GoTH Deployer 🚀
 
-A beautiful deployment platform specifically designed for the **GoTH stack** (Golang + HTMX + Tailwind + Templ). Deploy your server-side rendering applications with automatic subdomain creation, just like Netlify or Heroku, but optimized for Go applications using HTMX.
+A beautiful deployment platform for server-rendered web apps built with the **GoTH stack**:  
+**Go 1.23 + HTMX + TailwindCSS + [templ](https://github.com/a-h/templ)**
 
-## Features
+## ⚡ What is it?
 
-- 🚀 **One-Click Deployments** - Connect your GitHub repository and deploy instantly
-- 🌐 **Automatic Subdomains** - Each project gets its own subdomain
-- ⚡ **GoTH Stack Optimized** - Built-in support for templ generation and Go builds
-- 📊 **Beautiful Dashboard** - Modern UI built with Tailwind CSS and HTMX
-- 🔒 **GitHub Integration** - Secure OAuth authentication with GitHub
-- 📝 **Real-time Logs** - Watch your deployments happen in real-time
-- 🎯 **Zero Configuration** - Just connect and deploy
+`goth-deploy` lets you connect a GitHub repository and deploy your GoTH app to a custom subdomain in seconds — like `myapp.example.com`.  
+No YAML, no JS frameworks, no containers — just idiomatic Go and hypermedia.
 
-## Tech Stack
+## ✨ Features
 
-- **Backend**: Go 1.23 with idiomatic patterns
-- **Frontend**: HTMX for dynamic interactions (minimal JavaScript)
-- **Styling**: Tailwind CSS for beautiful, responsive design
-- **Templates**: Templ for type-safe HTML templates
-- **Database**: SQLite for simplicity
-- **Authentication**: GitHub OAuth
-- **Deployment**: Git-based with automatic builds
+- 🌀 **HTMX-native routing & interactivity** (zero custom JS)
+- 🎨 **Templ-based server rendering** with type-safe templates
+- 🌐 **Auto subdomain provisioning** per deployment
+- 🔐 **GitHub OAuth integration** with seamless authentication
+- 🚀 **One-click deployments** with real-time build logs
+- ⚙️ **Environment variable management** via beautiful UI
+- 📊 **Beautiful dashboard** with deployment stats and project overview
+- 🧰 **Minimal config** (convention over configuration)
+- 🔒 **Secure and idiomatic Go 1.23 backend**
 
-## Quick Start
+## 🏗️ Architecture
+
+The application follows a clean architecture pattern:
+
+```
+goth-deploy/
+├── cmd/server/              # Application entry point
+├── internal/
+│   ├── config/             # Configuration management
+│   ├── database/           # SQLite database and migrations
+│   ├── handlers/           # HTTP handlers and routing
+│   ├── models/            # Data models and types
+│   └── services/          # Business logic (GitHub, deployment, proxy)
+└── web/templates/         # Templ templates with Tailwind CSS
+```
+
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Go 1.23 or later
+- Go 1.23+
 - Git
-- GitHub account for OAuth app
+- GitHub account
 
-### Installation
+### 1. Clone and Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd deployer-golang-htmx
-   ```
-
-2. **Install dependencies**
-   ```bash
-   go mod download
-   go install github.com/a-h/templ/cmd/templ@latest
-   ```
-
-3. **Generate templ files**
-   ```bash
-   templ generate
-   ```
-
-4. **Set up GitHub OAuth**
-   - Go to GitHub Settings > Developer settings > OAuth Apps
-   - Create a new OAuth app with:
-     - Homepage URL: `http://localhost:8080`
-     - Authorization callback URL: `http://localhost:8080/auth/github/callback`
-   - Copy the Client ID and Client Secret
-
-5. **Configure environment variables**
-   
-   Create a `.env` file (or export directly):
-   ```env
-   GITHUB_CLIENT_ID=your_github_client_id
-   GITHUB_CLIENT_SECRET=your_github_client_secret
-   SESSION_SECRET=your_super_secret_session_key
-   ```
-
-6. **Run the application**
-   ```bash
-   go run cmd/server/main.go
-   ```
-
-7. **Open your browser**
-   Navigate to `http://localhost:8080`
-
-## Usage
-
-### For End Users
-
-1. **Sign in with GitHub** - Click the GitHub sign-in button
-2. **Create a Project** - Click "New Project" and select a repository
-3. **Deploy** - Click the deploy button and watch the magic happen
-4. **Access Your App** - Your app will be available at `https://your-app.localhost:8080`
-
-### For Developers
-
-The platform automatically:
-- Clones your repository
-- Runs `go mod download` to install dependencies
-- Generates templ files if they exist
-- Builds your application with `go build`
-- Starts your service with proper environment variables
-
-## Project Structure
-
-```
-deployer-golang-htmx/
-├── cmd/
-│   └── server/           # Main application entry point
-├── internal/
-│   ├── config/          # Configuration management
-│   ├── database/        # Database connection and migrations
-│   ├── handlers/        # HTTP handlers
-│   ├── models/          # Data models
-│   └── services/        # Business logic (GitHub, deployment)
-├── web/
-│   ├── templates/       # Templ template files
-│   └── static/          # Static assets (CSS, JS, images)
-├── data/                # SQLite database files
-├── deployments/         # Deployed applications
-└── README.md
+```bash
+git clone <repository-url>
+cd goth-deploy
+make setup
 ```
 
-## Environment Variables
+### 2. Configure GitHub OAuth
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Server port | `8080` |
-| `DATABASE_URL` | SQLite database path | `./data/app.db` |
-| `GITHUB_CLIENT_ID` | GitHub OAuth client ID | Required |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth client secret | Required |
-| `SESSION_SECRET` | Session encryption key | Required |
-| `DEPLOYMENT_PATH` | Directory for deployments | `./deployments` |
-| `BASE_DOMAIN` | Base domain for subdomains | `localhost:8080` |
-| `ENVIRONMENT` | Application environment | `development` |
+1. Go to [GitHub Developer Settings](https://github.com/settings/applications/new)
+2. Create a new OAuth App with:
+   - **Application name**: GoTH Deployer
+   - **Homepage URL**: `http://localhost:8080`
+   - **Authorization callback URL**: `http://localhost:8080/auth/github/callback`
+3. Copy your Client ID and Client Secret
 
-## Deployment Requirements
+### 3. Environment Configuration
 
-Your GoTH applications should:
+Create a `.env` file:
 
-1. **Have a `go.mod` file** in the root directory
-2. **Main package** should be in `cmd/server/main.go`
-3. **Use templ templates** (optional) - they'll be auto-generated
-4. **Accept a `PORT` environment variable** for the server port
-5. **Be buildable** with standard `go build` commands
+```bash
+# Server Configuration
+PORT=8080
+DATABASE_URL=./data/app.db
+SESSION_SECRET=your-super-secret-session-key-change-this-in-production
 
-Example main.go structure:
-```go
-package main
+# GitHub OAuth Configuration
+GITHUB_CLIENT_ID=your-github-client-id
+GITHUB_CLIENT_SECRET=your-github-client-secret
+GITHUB_REDIRECT_URL=http://localhost:8080/auth/github/callback
 
-import (
-    "net/http"
-    "os"
-)
+# Deployment Configuration
+DEPLOYMENT_ROOT=./deployments
+BASE_DOMAIN=localhost:8080
+ENABLE_HTTPS=false
 
-func main() {
-    port := os.Getenv("PORT")
-    if port == "" {
-        port = "8080"
-    }
-    
-    // Your HTMX + Templ application setup
-    http.ListenAndServe(":"+port, handler)
-}
+# Optional: GitHub Webhook Secret for automatic deployments
+GITHUB_WEBHOOK_SECRET=your-webhook-secret
 ```
 
-## API Endpoints
+### 4. Run the Application
 
-- `GET /` - Landing page
-- `GET /auth/github` - GitHub OAuth initiation
-- `GET /auth/github/callback` - GitHub OAuth callback
-- `GET /dashboard` - User dashboard
-- `GET /projects` - List available repositories (HTMX)
-- `POST /projects` - Create new project
-- `GET /projects/{id}` - Project details
-- `POST /projects/{id}/deploy` - Deploy project
-- `GET /projects/{id}/logs` - Get deployment logs
-- `DELETE /projects/{id}` - Delete project
+```bash
+make run
+```
 
-## Contributing
+Visit [http://localhost:8080](http://localhost:8080) and sign in with GitHub!
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes
-4. Run tests: `go test ./...`
-5. Generate templ files: `templ generate`
-6. Commit your changes: `git commit -am 'Add feature'`
-7. Push to the branch: `git push origin feature-name`
-8. Submit a pull request
+## 🛠️ Development
 
-## License
+### Available Commands
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+```bash
+make build      # Build the application
+make run        # Build and run
+make dev        # Development mode with hot reload (requires air)
+make templ      # Generate templ files
+make deps       # Install dependencies
+make clean      # Clean build artifacts
+make test       # Run tests
+make fmt        # Format code
+```
 
-## Acknowledgments
+### Project Structure
 
-- Built with [templ](https://github.com/a-h/templ) for type-safe HTML templates
-- Styled with [Tailwind CSS](https://tailwindcss.com/)
-- Powered by [HTMX](https://htmx.org/) for dynamic interactions
-- Uses [Chi](https://github.com/go-chi/chi) for HTTP routing
+- **Templates**: `web/templates/` - Templ templates with Tailwind CSS
+- **Handlers**: `internal/handlers/` - HTTP request handlers
+- **Services**: `internal/services/` - Business logic
+- **Models**: `internal/models/` - Data structures
+- **Database**: `internal/database/` - SQLite with migrations
+
+### Tech Stack Details
+
+- **Backend**: Go 1.23 with Chi router
+- **Frontend**: HTMX + TailwindCSS (via CDN)
+- **Templates**: Templ for type-safe HTML generation
+- **Database**: SQLite with migrations
+- **Authentication**: GitHub OAuth 2.0
+- **Sessions**: Secure cookie-based sessions
+
+## 🌟 How It Works
+
+1. **Authentication**: Users sign in with GitHub OAuth
+2. **Repository Selection**: Browse and select Go repositories
+3. **Project Creation**: Configure build/start commands and subdomain
+4. **Deployment**: One-click deployment with real-time logs
+5. **Proxy**: Automatic reverse proxy to serve apps on subdomains
+6. **Management**: Environment variables, build logs, and project settings
+
+## 🎯 Deployment Flow
+
+1. User clicks "Deploy" on a project
+2. System clones the GitHub repository
+3. Runs the build command in the project directory
+4. Starts the application with the start command
+5. Sets up reverse proxy for the subdomain
+6. Updates project status and deployment logs
+
+## 📋 Supported Project Types
+
+Currently optimized for Go applications, particularly those using:
+- Go HTTP servers
+- GoTH stack applications (Go + HTMX + Tailwind + Templ)
+- Any Go application that can be built with `go build`
+
+## 🔧 Configuration
+
+### Default Build/Start Commands
+
+- **Build Command**: `go build -o main .`
+- **Start Command**: `./main`
+- **Port**: `8080` (configurable per project)
+
+### Environment Variables
+
+Projects can have custom environment variables managed through the UI:
+- Secure storage in database
+- Available during build and runtime
+- Easy management via HTMX interface
+
+## 🚀 Production Deployment
+
+For production deployment:
+
+1. Use a proper domain with wildcard DNS (`*.yourdomain.com`)
+2. Set up SSL/TLS certificates
+3. Configure proper session secrets
+4. Use a more robust database (PostgreSQL recommended)
+5. Set up GitHub webhooks for automatic deployments
+6. Configure firewall and security settings
+
+## 🤝 Contributing
+
+This is an experimental project aimed at the Go community building beautiful, dynamic apps with a minimalist toolchain.
+
+## 📄 License
+
+MIT License - see LICENSE file for details.
+
+---
+
+**Made with 💀 by GoTH stack fans.**
+
+*Deploy your Go + HTMX + Tailwind applications with style!*

@@ -1,162 +1,103 @@
 package main
 
 import (
-	"context"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
 	"strings"
-	"syscall"
-	"time"
 
-	"deployer/internal/config"
-	"deployer/internal/database"
-	"deployer/internal/handlers"
-	"deployer/internal/services"
+	"goth-deploy/internal/config"
+	"goth-deploy/internal/database"
+	"goth-deploy/internal/handlers"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 )
 
 func main() {
 	// Load environment variables
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
+		log.Println("No .env file found, using system environment variables")
 	}
 
-	// Load configuration
-	cfg := config.Load()
+	// Initialize configuration
+	cfg := config.New()
 
 	// Initialize database
-	db, err := database.Connect(cfg.DatabaseURL)
+	db, err := database.New(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Fatal("Failed to initialize database:", err)
 	}
 	defer db.Close()
 
 	// Run migrations
-	if err := database.Migrate(cfg.DatabaseURL); err != nil {
+	if err := database.Migrate(db); err != nil {
 		log.Fatal("Failed to run migrations:", err)
 	}
 
-	// Initialize services
-	githubService := services.NewGitHubService(cfg.GitHubClientID, cfg.GitHubClientSecret)
-	proxyService := services.NewProxyService()
-	deploymentService := services.NewDeploymentService(cfg.DeploymentPath, cfg.BaseDomain, proxyService)
-	secretsService := services.NewSecretsService(db, cfg.EncryptionKey)
-
-	// Connect secrets service to deployment service
-	deploymentService.SetSecretsService(secretsService)
-
-	// Restart active deployments on startup
-	log.Println("Restarting active deployments...")
-	if err := deploymentService.RestartActiveDeployments(db); err != nil {
-		log.Printf("Warning: Failed to restart some deployments: %v", err)
-	} else {
-		log.Println("Active deployments restarted successfully")
-	}
-
 	// Initialize handlers
-	handler := handlers.NewTemplHandler(db, githubService, deploymentService, secretsService, cfg)
+	handler := handlers.New(db, cfg)
 
-	// Setup main router for dashboard/management
-	r := chi.NewRouter()
-
-	// Setup subdomain router for deployed apps
-	subdomainRouter := chi.NewRouter()
-
-	// Middleware for main router
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Compress(5))
-
-	// CORS for main router
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300,
-	}))
-
-	// Main app routes (dashboard/management)
-	r.Get("/", handler.Home)
-	r.Get("/auth/github", handler.GitHubAuth)
-	r.Get("/auth/github/callback", handler.GitHubCallback)
-	r.Get("/dashboard", handler.Dashboard)
-	r.Get("/projects", handler.ListProjects)
-	r.Post("/projects", handler.CreateProject)
-	r.Get("/projects/{id}", handler.GetProject)
-	r.Post("/projects/{id}/deploy", handler.DeployProject)
-	r.Post("/projects/{id}/stop", handler.StopProject)
-	r.Delete("/projects/{id}", handler.DeleteProject)
-	r.Get("/projects/{id}/logs", handler.GetDeploymentLogs)
-	r.Get("/projects/{id}/secrets", handler.GetProjectSecrets)
-	r.Post("/projects/{id}/secrets", handler.CreateProjectSecret)
-	r.Put("/projects/{id}/secrets/{secretId}", handler.UpdateProjectSecret)
-	r.Delete("/projects/{id}/secrets/{secretId}", handler.DeleteProjectSecret)
-	r.Get("/projects/{id}/secrets/{secretId}/value", handler.GetSecretValue)
-	r.Post("/deployments/stop-all", handler.StopAllProjects)
-	r.Get("/deployments/active", handler.GetActiveDeployments)
-
-	// Static files
-	workDir, _ := os.Getwd()
-	filesDir := http.Dir(workDir + "/web/static/")
-	r.Handle("/static/*", http.StripPrefix("/static", http.FileServer(filesDir)))
-
-	// Subdomain routes (deployed apps)
-	subdomainRouter.Handle("/*", proxyService)
-
-	// Create a custom handler that routes based on subdomain
-	mainHandler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		host := req.Host
-
-		// Remove port from host
-		if colonIndex := strings.LastIndex(host, ":"); colonIndex != -1 {
-			host = host[:colonIndex]
-		}
-
-		// Check if this is a subdomain request
-		parts := strings.Split(host, ".")
-		if len(parts) > 1 && host != "localhost" && parts[0] != "" {
-			// This is a subdomain request, use the proxy service
-			subdomainRouter.ServeHTTP(w, req)
-		} else {
-			// This is the main app request
-			r.ServeHTTP(w, req)
-		}
-	})
+	// Create a custom server that routes based on subdomains
+	server := &subdomainRouter{
+		mainHandler:  handler.Routes(),
+		proxyHandler: handler.Proxy,
+		baseDomain:   cfg.BaseDomain,
+	}
 
 	// Start server
-	srv := &http.Server{
-		Addr:    ":" + cfg.Port,
-		Handler: mainHandler,
+	log.Printf("Starting server on :%s", cfg.Port)
+	log.Printf("Main application: http://%s", cfg.BaseDomain)
+	log.Printf("Deployed apps: http://{subdomain}.%s", cfg.BaseDomain)
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, server))
+}
+
+// subdomainRouter routes requests based on subdomain
+type subdomainRouter struct {
+	mainHandler  http.Handler
+	proxyHandler http.Handler
+	baseDomain   string
+}
+
+func (sr *subdomainRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	host := r.Host
+
+	// Remove port if present
+	if colonIndex := strings.Index(host, ":"); colonIndex != -1 {
+		host = host[:colonIndex]
 	}
 
-	// Graceful shutdown
-	go func() {
-		log.Printf("Server starting on port %s", cfg.Port)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal("Server failed to start:", err)
-		}
-	}()
+	// Check if this is a subdomain request
+	if sr.isSubdomainRequest(host) {
+		// Route to proxy for deployed applications
+		sr.proxyHandler.ServeHTTP(w, r)
+	} else {
+		// Route to main application
+		sr.mainHandler.ServeHTTP(w, r)
+	}
+}
 
-	// Wait for interrupt signal to gracefully shutdown
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	log.Println("Shutting down server...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server forced to shutdown:", err)
+func (sr *subdomainRouter) isSubdomainRequest(host string) bool {
+	// For localhost development
+	if strings.Contains(host, "localhost") {
+		parts := strings.Split(host, ".")
+		// If there's a subdomain before localhost (e.g., myapp.localhost)
+		return len(parts) > 1 && parts[0] != "www"
 	}
 
-	log.Println("Server exited")
+	// For production domains
+	baseDomain := sr.baseDomain
+	if colonIndex := strings.Index(baseDomain, ":"); colonIndex != -1 {
+		baseDomain = baseDomain[:colonIndex]
+	}
+
+	// Check if host has more parts than base domain (indicating a subdomain)
+	hostParts := strings.Split(host, ".")
+	baseParts := strings.Split(baseDomain, ".")
+
+	// If host has more parts than base domain, it's likely a subdomain
+	if len(hostParts) > len(baseParts) {
+		return true
+	}
+
+	// Check if host is exactly the base domain
+	return host != baseDomain && host != "www."+baseDomain
 }
